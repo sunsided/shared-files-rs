@@ -81,6 +81,9 @@ impl AsyncRead for SharedTemporaryFileReader {
     ) -> Poll<io::Result<()>> {
         let this = self.project();
         let pos = buf.filled().len();
+
+        // TODO: Ensure to not read more bytes than were actually written.
+        //       This should help dealing with pre-allocated files.
         if let Poll::Ready(result) = this.file.poll_read(cx, buf) {
             this.sentinel.remove_reader_waker(&this.id);
             if let Err(e) = result {

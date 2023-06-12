@@ -1,3 +1,6 @@
+//! This test will slowly write a file to disk while simultaneously
+//! reading it from a different thread.
+
 use rand::{thread_rng, Rng};
 use std::time::Duration;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
