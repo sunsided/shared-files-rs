@@ -38,6 +38,17 @@ pub use reader::{FileSize, ReadError, SharedFileReader};
 pub use traits::*;
 pub use writer::{CompleteWritingError, SharedFileWriter, WriteError};
 
+/// Prelude for commonly used types and traits.
+pub mod prelude {
+    pub use crate::traits::*;
+    pub use crate::SharedFile;
+
+    #[cfg_attr(docsrs, doc(cfg(feature = "async-tempfile")))]
+    #[cfg(feature = "async-tempfile")]
+    pub use crate::SharedTemporaryFile;
+}
+
+#[cfg_attr(docsrs, doc(cfg(feature = "async-tempfile")))]
 #[cfg(feature = "async-tempfile")]
 pub use temp_file::*;
 

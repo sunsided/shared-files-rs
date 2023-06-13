@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Added
+
+- Added `prelude` module for simplified type imports.
+
 ## [0.0.2] - 2023-06-14
 
 ### Added
