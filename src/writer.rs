@@ -1,5 +1,4 @@
-use crate::{Sentinel, State};
-use async_tempfile::TempFile;
+use crate::{FilePath, Sentinel, SharedFileType, State};
 use crossbeam::atomic::AtomicCell;
 use pin_project::{pin_project, pinned_drop};
 use std::io::{Error, ErrorKind, IoSlice};
@@ -12,33 +11,40 @@ use tokio::io::AsyncWrite;
 
 /// A writer for the shared temporary file.
 #[pin_project(PinnedDrop)]
-pub struct SharedTemporaryFileWriter {
+pub struct SharedFileWriter<T> {
     /// The file to write to.
     #[pin]
-    file: TempFile,
+    file: T,
     /// The sentinel value to keep the file alive.
-    sentinel: Arc<Sentinel>,
+    sentinel: Arc<Sentinel<T>>,
 }
 
-impl SharedTemporaryFileWriter {
-    pub(crate) fn new(file: TempFile, sentinel: Arc<Sentinel>) -> Self {
+impl<T> SharedFileWriter<T> {
+    pub(crate) fn new(file: T, sentinel: Arc<Sentinel<T>>) -> Self {
         Self { file, sentinel }
     }
-}
 
-impl SharedTemporaryFileWriter {
     /// Gets the file path.
-    pub async fn file_path(&self) -> &PathBuf {
+    pub async fn file_path(&self) -> &PathBuf
+    where
+        T: FilePath,
+    {
         self.file.file_path()
     }
 
     /// Synchronizes data and metadata with the disk buffer.
-    pub async fn sync_all(&self) -> Result<(), Error> {
+    pub async fn sync_all(&self) -> Result<(), T::SyncError>
+    where
+        T: SharedFileType,
+    {
         self.file.sync_all().await
     }
 
     /// Synchronizes data with the disk buffer.
-    pub async fn sync_data(&self) -> Result<(), Error> {
+    pub async fn sync_data(&self) -> Result<(), T::SyncError>
+    where
+        T: SharedFileType,
+    {
         self.file.sync_data().await
     }
 
@@ -46,8 +52,13 @@ impl SharedTemporaryFileWriter {
     ///
     /// Use [`complete_no_sync`](Self::complete_no_sync) if you do not wish
     /// to sync the file to disk.
-    pub async fn complete(self) -> Result<(), CompleteWritingError> {
-        self.file.sync_all().await?;
+    pub async fn complete(self) -> Result<(), CompleteWritingError>
+    where
+        T: SharedFileType,
+    {
+        if let Err(_) = self.file.sync_all().await {
+            return Err(CompleteWritingError::SyncError);
+        }
         self.complete_no_sync()
     }
 
@@ -106,7 +117,7 @@ impl SharedTemporaryFileWriter {
     /// This will update the internal byte count and produce an error
     /// if the update failed.
     fn handle_poll_write_result(
-        sentinel: &Sentinel,
+        sentinel: &Sentinel<T>,
         poll: Poll<Result<usize, Error>>,
     ) -> Poll<Result<usize, Error>> {
         let result = match poll {
@@ -134,7 +145,7 @@ impl SharedTemporaryFileWriter {
 }
 
 #[pinned_drop]
-impl PinnedDrop for SharedTemporaryFileWriter {
+impl<T> PinnedDrop for SharedFileWriter<T> {
     fn drop(mut self: Pin<&mut Self>) {
         self.finalize_state().ok();
     }
@@ -146,6 +157,8 @@ pub enum CompleteWritingError {
     Io(#[from] Error),
     #[error("Writing to the file failed")]
     FileWritingFailed,
+    #[error("Failed to synchronize the file with the underlying buffer")]
+    SyncError,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -156,7 +169,10 @@ pub enum WriteError {
     FileClosed,
 }
 
-impl AsyncWrite for SharedTemporaryFileWriter {
+impl<T> AsyncWrite for SharedFileWriter<T>
+where
+    T: AsyncWrite,
+{
     fn poll_write(
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,

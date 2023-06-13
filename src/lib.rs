@@ -15,9 +15,13 @@
 #![forbid(unsafe_code)]
 
 mod reader;
+
+#[cfg_attr(docsrs, doc(cfg(feature = "async-tempfile")))]
+#[cfg(feature = "async-tempfile")]
+mod temp_file;
+mod traits;
 mod writer;
 
-use async_tempfile::TempFile;
 use crossbeam::atomic::AtomicCell;
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -25,18 +29,22 @@ use std::sync::{Arc, Mutex};
 use std::task::Waker;
 use uuid::Uuid;
 
-pub use reader::{FileSize, ReadError, SharedTemporaryFileReader};
-pub use writer::{CompleteWritingError, SharedTemporaryFileWriter, WriteError};
+pub use reader::{FileSize, ReadError, SharedFileReader};
+pub use traits::*;
+pub use writer::{CompleteWritingError, SharedFileWriter, WriteError};
 
-/// A temporary file with shared read/write access.
-pub struct SharedTemporaryFile {
+#[cfg(feature = "async-tempfile")]
+pub use temp_file::*;
+
+/// A file with shared read/write access for in-process file sharing.
+pub struct SharedFile<T> {
     /// The sentinel value to keep the file alive.
-    sentinel: Arc<Sentinel>,
+    sentinel: Arc<Sentinel<T>>,
 }
 
-struct Sentinel {
+struct Sentinel<T> {
     /// The original file. This keeps the file open until all references are dropped.
-    original: TempFile,
+    original: T,
     /// The state of the write operation.
     state: AtomicCell<State>,
     /// Wakers to wake up all interested readers.
@@ -53,10 +61,16 @@ enum State {
     Failed,
 }
 
-impl SharedTemporaryFile {
+impl<T> SharedFile<T>
+where
+    T: SharedFileType<Type = T>,
+{
     /// Creates a new temporary file.
-    pub async fn new() -> Result<SharedTemporaryFile, async_tempfile::Error> {
-        let file = TempFile::new().await?;
+    pub async fn new_async<N>() -> Result<SharedFile<T>, N::Error>
+    where
+        N: AsyncNew<Target = T>,
+    {
+        let file = N::new().await?;
         Ok(Self {
             sentinel: Arc::new(Sentinel {
                 original: file,
@@ -66,30 +80,34 @@ impl SharedTemporaryFile {
         })
     }
 
-    /// Obtains the path of the temporary file.
-    pub async fn file_path(&self) -> &PathBuf {
-        self.sentinel.original.file_path()
-    }
-
     /// Creates a writer for the file.
     ///
     /// Note that this operation can result in odd behavior if the
     /// file is accessed multiple times for write access. User code
     /// must make sure that only one meaningful write is performed at
     /// the same time.
-    pub async fn writer(&self) -> Result<SharedTemporaryFileWriter, async_tempfile::Error> {
+    pub async fn writer(&self) -> Result<SharedFileWriter<T::Type>, T::OpenError> {
         let file = self.sentinel.original.open_rw().await?;
-        Ok(SharedTemporaryFileWriter::new(file, self.sentinel.clone()))
+        Ok(SharedFileWriter::new(file, self.sentinel.clone()))
     }
 
     /// Creates a reader for the file.
-    pub async fn reader(&self) -> Result<SharedTemporaryFileReader, async_tempfile::Error> {
+    pub async fn reader(&self) -> Result<SharedFileReader<T::Type>, T::OpenError> {
         let file = self.sentinel.original.open_ro().await?;
-        Ok(SharedTemporaryFileReader::new(file, self.sentinel.clone()))
+        Ok(SharedFileReader::new(file, self.sentinel.clone()))
     }
 }
 
-impl Sentinel {
+impl<T> FilePath for SharedFile<T>
+where
+    T: FilePath,
+{
+    fn file_path(&self) -> &PathBuf {
+        self.sentinel.original.file_path()
+    }
+}
+
+impl<T> Sentinel<T> {
     fn wake_readers(&self) {
         let mut lock = self
             .wakers
