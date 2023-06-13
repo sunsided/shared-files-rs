@@ -20,7 +20,7 @@ use shared_files::{
 const NUM_PREFILL_VALUES_U16: usize = 65_536;
 
 /// The number of u16 values to write.
-const NUM_VALUES_U16: usize = 1024;
+const NUM_VALUES_U16: usize = 3_724;
 
 /// The number of bytes occupied by the written values.
 const NUM_BYTES: usize = NUM_VALUES_U16 * std::mem::size_of::<u16>();
@@ -93,6 +93,9 @@ async fn prefill_file(file: SharedTemporaryFile) -> SharedTemporaryFile {
                 .await
                 .expect("failed to write");
         }
+
+        // Ensure data is flushed to disk.
+        writer.sync_all().await.expect("failed to sync");
     }
 
     file

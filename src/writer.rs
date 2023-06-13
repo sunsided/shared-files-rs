@@ -10,6 +10,12 @@ use tokio::io;
 use tokio::io::AsyncWrite;
 
 /// A writer for the shared temporary file.
+///
+/// ## Dropping the writer
+///
+/// Note that while dropping the writer while implicitly change it to "completed",
+/// you must manually call [`SharedFileWriter::sync_all`] or [`SharedFileWriter::sync_data`]
+/// to ensure all content is flushed to the underlying buffer.
 #[pin_project(PinnedDrop)]
 pub struct SharedFileWriter<T> {
     /// The file to write to.
@@ -25,7 +31,7 @@ impl<T> SharedFileWriter<T> {
     }
 
     /// Gets the file path.
-    pub async fn file_path(&self) -> &PathBuf
+    pub fn file_path(&self) -> &PathBuf
     where
         T: FilePath,
     {
@@ -93,7 +99,7 @@ impl<T> SharedFileWriter<T> {
     fn finalize_state(&self) -> Result<(), CompleteWritingError> {
         let result = match self.sentinel.state.load() {
             WriteState::Pending(_committed, written) => {
-                debug_assert_eq!(_committed, written);
+                assert_eq!(_committed, written, "The number of committed bytes is less than the number of written bytes - call sync before dropping");
                 self.sentinel.state.store(WriteState::Completed(written));
                 Ok(())
             }
