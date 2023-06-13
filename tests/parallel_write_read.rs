@@ -1,13 +1,12 @@
 //! This test will slowly write a file to disk while simultaneously
 //! reading it from a different thread.
 
-use async_tempfile::TempFile;
 use rand::{thread_rng, Rng};
 use std::time::Duration;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::time::sleep;
 
-use shared_files::{FileSize, SharedFile, SharedFileReader, SharedFileType};
+use shared_files::{FileSize, SharedTempFile, SharedTempFileReader};
 
 /// The number of u16 values to write.
 const NUM_VALUES_U16: usize = 65_536;
@@ -17,7 +16,7 @@ const NUM_BYTES: usize = NUM_VALUES_U16 * std::mem::size_of::<u16>();
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn parallel_write_read() {
-    let file = SharedFile::new_async::<TempFile>()
+    let file = SharedTempFile::new_async()
         .await
         .expect("failed to create file");
 
@@ -65,7 +64,7 @@ fn validate_result(read: Vec<u8>) {
 }
 
 /// Writes with arbitrary delays.
-async fn parallel_write(file: SharedFile<TempFile>) {
+async fn parallel_write(file: SharedTempFile) {
     let mut writer = file.writer().await.expect("failed to create writer");
 
     for i in 0..NUM_VALUES_U16 {
@@ -87,10 +86,7 @@ async fn parallel_write(file: SharedFile<TempFile>) {
 }
 
 /// Reads while the writer is still active.
-async fn parallel_read<T>(mut reader: SharedFileReader<T>) -> Vec<u8>
-where
-    T: SharedFileType,
-{
+async fn parallel_read(mut reader: SharedTempFileReader) -> Vec<u8> {
     let mut results = Vec::default();
     let mut buf = [0u8; 1024];
     loop {

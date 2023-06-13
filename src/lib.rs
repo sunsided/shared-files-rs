@@ -8,9 +8,15 @@
 //! Normally, reading a file while it is written results in the read stream ending prematurely
 //! as EOF; the purpose of this crate is to prevent exactly that.
 //!
-//! The functionality is currently based on the [async-tempfile](https://github.com/sunsided/async-tempfile-rs)
-//! crate. A generic implementation is planned for the use of arbitrary `AsyncWrite` /
-//! `AsyncRead` backing.
+//! Any file type can be used as a backing as long as it implements the crate's [`SharedFileType`]
+//! trait, which in turn requires [`AsyncWrite`](tokio::io::AsyncWrite), [`AsyncRead`](tokio::io::AsyncRead)
+//! and [`Unpin`].
+//!
+//! ## Crate Features
+//!
+//! - `async-tempfile`: Enables the [`SharedTempFile`] type via the
+//!   [async-tempfile](https://github.com/sunsided/async-tempfile-rs) crate. Since this is how
+//!   this crate was initially meant to be used, this feature is enabled by default.
 
 #![forbid(unsafe_code)]
 
@@ -48,13 +54,14 @@ struct Sentinel<T> {
     /// The original file. This keeps the file open until all references are dropped.
     original: T,
     /// The state of the write operation.
-    state: AtomicCell<State>,
+    state: AtomicCell<WriteState>,
     /// Wakers to wake up all interested readers.
     wakers: Mutex<HashMap<Uuid, Waker>>,
 }
 
+/// The state of a file write operation.
 #[derive(Debug, Clone, Copy)]
-enum State {
+enum WriteState {
     /// The write operation is pending. Contains the number of bytes written.
     Pending(usize),
     /// The write operation completed. Contains the file size.
@@ -68,20 +75,20 @@ where
     T: SharedFileType<Type = T>,
 {
     /// Synchronously creates a new temporary file.
-    pub fn new<N>() -> Result<SharedFile<T>, N::Error>
+    pub fn new() -> Result<SharedFile<T>, T::Error>
     where
-        N: NewFile<Target = T>,
+        T: NewFile<Target = T>,
     {
-        let file = N::new()?;
+        let file = T::new()?;
         Ok(Self::from(file))
     }
 
     /// Asynchronously creates a new temporary file.
-    pub async fn new_async<N>() -> Result<SharedFile<T>, N::Error>
+    pub async fn new_async() -> Result<SharedFile<T>, T::Error>
     where
-        N: AsyncNewFile<Target = T>,
+        T: AsyncNewFile<Target = T>,
     {
-        let file = N::new().await?;
+        let file = T::new().await?;
         Ok(Self::from(file))
     }
 
@@ -108,7 +115,7 @@ impl<T> From<T> for SharedFile<T> {
         Self {
             sentinel: Arc::new(Sentinel {
                 original: value,
-                state: AtomicCell::new(State::Pending(0)),
+                state: AtomicCell::new(WriteState::Pending(0)),
                 wakers: Mutex::new(HashMap::default()),
             }),
         }
@@ -123,7 +130,7 @@ where
         Self {
             sentinel: Arc::new(Sentinel {
                 original: T::default(),
-                state: AtomicCell::new(State::Pending(0)),
+                state: AtomicCell::new(WriteState::Pending(0)),
                 wakers: Mutex::new(HashMap::default()),
             }),
         }

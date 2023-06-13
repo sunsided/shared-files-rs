@@ -1,4 +1,7 @@
-use crate::{AsyncNewFile, CompleteWritingError, FilePath, SharedFileType};
+use crate::{
+    AsyncNewFile, CompleteWritingError, FilePath, SharedFile, SharedFileReader, SharedFileType,
+    SharedFileWriter,
+};
 use async_tempfile::TempFile;
 use std::ops::Deref;
 use std::path::PathBuf;
@@ -44,3 +47,12 @@ impl FilePath for TempFile {
         self.file_path()
     }
 }
+
+/// A type alias for a [`SharedFile`] wrapping a [`TempFile`].
+pub type SharedTempFile = SharedFile<TempFile>;
+
+/// A type alias for a [`SharedFileReader`] wrapping a [`TempFile`].
+pub type SharedTempFileReader = SharedFileReader<TempFile>;
+
+/// A type alias for a [`SharedFileWriter`] wrapping a [`TempFile`].
+pub type SharedTempFileWriter = SharedFileWriter<TempFile>;

@@ -1,4 +1,4 @@
-use crate::{FilePath, Sentinel, SharedFileType, State};
+use crate::{FilePath, Sentinel, SharedFileType, WriteState};
 use crossbeam::atomic::AtomicCell;
 use pin_project::{pin_project, pinned_drop};
 use std::io::{Error, ErrorKind, IoSlice};
@@ -75,12 +75,12 @@ impl<T> SharedFileWriter<T> {
     /// See also [`update_state`](Self::update_state) for increasing the byte count.
     fn finalize_state(&self) -> Result<(), CompleteWritingError> {
         let result = match self.sentinel.state.load() {
-            State::Pending(size) => {
-                self.sentinel.state.store(State::Completed(size));
+            WriteState::Pending(size) => {
+                self.sentinel.state.store(WriteState::Completed(size));
                 Ok(())
             }
-            State::Completed(_) => Ok(()),
-            State::Failed => Err(CompleteWritingError::FileWritingFailed),
+            WriteState::Completed(_) => Ok(()),
+            WriteState::Failed => Err(CompleteWritingError::FileWritingFailed),
         };
 
         self.sentinel.wake_readers();
@@ -94,13 +94,13 @@ impl<T> SharedFileWriter<T> {
     /// Returns the number of bytes written in total.
     ///
     /// See also [`finalize_state`](Self::finalize_state) for finalizing the write.
-    fn update_state(state: &AtomicCell<State>, written: usize) -> Result<usize, Error> {
+    fn update_state(state: &AtomicCell<WriteState>, written: usize) -> Result<usize, Error> {
         match state.load() {
-            State::Pending(count) => {
-                state.store(State::Pending(count + written));
+            WriteState::Pending(count) => {
+                state.store(WriteState::Pending(count + written));
                 Ok(count)
             }
-            State::Completed(count) => {
+            WriteState::Completed(count) => {
                 // Ensure we do not try to write more data after completing
                 // the file.
                 if written != 0 {
@@ -108,7 +108,7 @@ impl<T> SharedFileWriter<T> {
                 }
                 Ok(count)
             }
-            State::Failed => Err(Error::from(ErrorKind::Other)),
+            WriteState::Failed => Err(Error::from(ErrorKind::Other)),
         }
     }
 
@@ -127,7 +127,7 @@ impl<T> SharedFileWriter<T> {
                     Err(e) => Poll::Ready(Err(e)),
                 },
                 Err(e) => {
-                    sentinel.state.store(State::Failed);
+                    sentinel.state.store(WriteState::Failed);
                     Poll::Ready(Err(e))
                 }
             },
@@ -193,7 +193,7 @@ where
                     Poll::Ready(Ok(()))
                 }
                 Err(e) => {
-                    this.sentinel.state.store(State::Failed);
+                    this.sentinel.state.store(WriteState::Failed);
                     Poll::Ready(Err(e))
                 }
             },
@@ -206,14 +206,14 @@ where
         match this.file.poll_shutdown(cx) {
             Poll::Ready(result) => match result {
                 Ok(()) => {
-                    if let State::Pending(count) = this.sentinel.state.load() {
-                        this.sentinel.state.store(State::Completed(count));
+                    if let WriteState::Pending(count) = this.sentinel.state.load() {
+                        this.sentinel.state.store(WriteState::Completed(count));
                     }
 
                     Poll::Ready(Ok(()))
                 }
                 Err(e) => {
-                    this.sentinel.state.store(State::Failed);
+                    this.sentinel.state.store(WriteState::Failed);
                     Poll::Ready(Err(e))
                 }
             },

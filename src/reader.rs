@@ -1,4 +1,4 @@
-use crate::{Sentinel, SharedFileType, State};
+use crate::{Sentinel, SharedFileType, WriteState};
 use pin_project::{pin_project, pinned_drop};
 use std::io::{Error, ErrorKind, SeekFrom};
 use std::pin::Pin;
@@ -49,9 +49,9 @@ impl<T> SharedFileReader<T> {
     /// Gets the (expected) size of the file to read.
     pub fn file_size(&self) -> FileSize {
         match self.sentinel.state.load() {
-            State::Pending(size) => FileSize::AtLeast(size),
-            State::Completed(size) => FileSize::Exactly(size),
-            State::Failed => FileSize::Error,
+            WriteState::Pending(size) => FileSize::AtLeast(size),
+            WriteState::Completed(size) => FileSize::Exactly(size),
+            WriteState::Failed => FileSize::Error,
         }
     }
 }
@@ -104,9 +104,9 @@ where
             // If the buffer was not advanced and source file is completed (or in fail state),
             // return as-is. Otherwise, reset and wait.
             match this.sentinel.state.load() {
-                State::Pending(_) => {}
-                State::Completed(_) => return Poll::Ready(Ok(())),
-                State::Failed => {
+                WriteState::Pending(_) => {}
+                WriteState::Completed(_) => return Poll::Ready(Ok(())),
+                WriteState::Failed => {
                     return Poll::Ready(Err(Error::new(
                         ErrorKind::BrokenPipe,
                         ReadError::FileClosed,
