@@ -49,10 +49,10 @@ impl FilePath for TempFile {
 }
 
 /// A type alias for a [`SharedFile`] wrapping a [`TempFile`].
-pub type SharedTempFile = SharedFile<TempFile>;
+pub type SharedTemporaryFile = SharedFile<TempFile>;
 
 /// A type alias for a [`SharedFileReader`] wrapping a [`TempFile`].
-pub type SharedTempFileReader = SharedFileReader<TempFile>;
+pub type SharedTemporaryFileReader = SharedFileReader<TempFile>;
 
 /// A type alias for a [`SharedFileWriter`] wrapping a [`TempFile`].
-pub type SharedTempFileWriter = SharedFileWriter<TempFile>;
+pub type SharedTemporaryFileWriter = SharedFileWriter<TempFile>;

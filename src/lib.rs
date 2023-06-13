@@ -13,7 +13,7 @@
 //!
 //! ## Crate Features
 //!
-//! - `async-tempfile`: Enables the [`SharedTempFile`] type via the
+//! - `async-tempfile`: Enables the [`SharedTemporaryFile`] type via the
 //!   [async-tempfile](https://github.com/sunsided/async-tempfile-rs) crate. Since this is how
 //!   this crate was initially meant to be used, this feature is enabled by default.
 
