@@ -53,6 +53,20 @@ pub mod prelude {
 pub use temp_file::*;
 
 /// A file with shared read/write access for in-process file sharing.
+///
+/// ## Writer / Reader Synchronization
+/// Since this wrapper takes over control of the write operation, readers
+/// will only be woken up on a call to [`SharedFileWriter::sync_data`],
+/// [`SharedFileWriter::sync_all`] or [`SharedFileWriter::flush`]. This is to
+/// ensure that data is actually written to the underlying buffer before
+/// the readers attempt to read it back.
+///
+/// ## Writer Finalization
+/// When a writer is dropped, it will move the state of the [`SharedFile`] to
+/// [`WriteState::Completed`]. It is important to note that drop is not asynchronous
+/// and therefore no flush to disk can be performed on the wrapped file.
+///
+/// ⚠️ **User code must make sure to manually sync to disk before dropping the writer.**
 #[derive(Debug)]
 pub struct SharedFile<T> {
     /// The sentinel value to keep the file alive.
@@ -104,7 +118,25 @@ where
 
     /// Creates a writer for the file.
     ///
-    /// Note that this operation can result in odd behavior if the
+    /// ## Reader / writer Synchronization
+    ///
+    /// Since this wrapper takes over control of the write operation, readers
+    /// will only be woken up on a call to [`SharedFileWriter::sync_data`],
+    /// [`SharedFileWriter::sync_all`] or [`SharedFileWriter::flush`]. This is to
+    /// ensure that data is actually written to the underlying buffer before
+    /// the readers attempt to read it back.
+    ///
+    /// ## Writer finalization
+    ///
+    /// ⚠️ **User code must make sure to manually sync to disk before dropping the writer.**
+    ///
+    /// When a writer is dropped, it will move the state of the [`SharedFile`] to
+    /// [`WriteState::Completed`]. It is important to note that drop is not asynchronous
+    /// and therefore no flush to disk can be performed on the wrapped file.
+    ///
+    /// ## One writer at a time
+    ///
+    /// This operation can result in odd behavior if the
     /// file is accessed multiple times for write access. User code
     /// must make sure that only one meaningful write is performed at
     /// the same time.
