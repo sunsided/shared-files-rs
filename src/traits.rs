@@ -28,14 +28,25 @@ pub trait SharedFileType: AsyncRead + AsyncWrite + Unpin {
 
 /// Trait for types that can be newly constructed asynchronously.
 #[async_trait::async_trait]
-pub trait AsyncNew {
+pub trait AsyncNewFile {
     /// The type created on success.
     type Target;
     /// The error type.
     type Error;
 
-    /// Creates a new instance of the type [`Target`](AsyncNew::Target).
+    /// Creates a new instance of the type [`Target`](AsyncNewFile::Target).
     async fn new() -> Result<Self::Target, Self::Error>;
+}
+
+/// Trait for types that can be newly constructed asynchronously.
+pub trait NewFile {
+    /// The type created on success.
+    type Target;
+    /// The error type.
+    type Error;
+
+    /// Creates a new instance of the type [`Target`](AsyncNewFile::Target).
+    fn new() -> Result<Self::Target, Self::Error>;
 }
 
 /// Trait for types that can synchronously determine the file path.

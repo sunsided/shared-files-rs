@@ -37,11 +37,13 @@ pub use writer::{CompleteWritingError, SharedFileWriter, WriteError};
 pub use temp_file::*;
 
 /// A file with shared read/write access for in-process file sharing.
+#[derive(Debug)]
 pub struct SharedFile<T> {
     /// The sentinel value to keep the file alive.
     sentinel: Arc<Sentinel<T>>,
 }
 
+#[derive(Debug)]
 struct Sentinel<T> {
     /// The original file. This keeps the file open until all references are dropped.
     original: T,
@@ -65,19 +67,22 @@ impl<T> SharedFile<T>
 where
     T: SharedFileType<Type = T>,
 {
-    /// Creates a new temporary file.
+    /// Synchronously creates a new temporary file.
+    pub fn new<N>() -> Result<SharedFile<T>, N::Error>
+    where
+        N: NewFile<Target = T>,
+    {
+        let file = N::new()?;
+        Ok(Self::from(file))
+    }
+
+    /// Asynchronously creates a new temporary file.
     pub async fn new_async<N>() -> Result<SharedFile<T>, N::Error>
     where
-        N: AsyncNew<Target = T>,
+        N: AsyncNewFile<Target = T>,
     {
         let file = N::new().await?;
-        Ok(Self {
-            sentinel: Arc::new(Sentinel {
-                original: file,
-                state: AtomicCell::new(State::Pending(0)),
-                wakers: Mutex::new(HashMap::default()),
-            }),
-        })
+        Ok(Self::from(file))
     }
 
     /// Creates a writer for the file.
@@ -95,6 +100,33 @@ where
     pub async fn reader(&self) -> Result<SharedFileReader<T::Type>, T::OpenError> {
         let file = self.sentinel.original.open_ro().await?;
         Ok(SharedFileReader::new(file, self.sentinel.clone()))
+    }
+}
+
+impl<T> From<T> for SharedFile<T> {
+    fn from(value: T) -> Self {
+        Self {
+            sentinel: Arc::new(Sentinel {
+                original: value,
+                state: AtomicCell::new(State::Pending(0)),
+                wakers: Mutex::new(HashMap::default()),
+            }),
+        }
+    }
+}
+
+impl<T> Default for SharedFile<T>
+where
+    T: Default,
+{
+    fn default() -> Self {
+        Self {
+            sentinel: Arc::new(Sentinel {
+                original: T::default(),
+                state: AtomicCell::new(State::Pending(0)),
+                wakers: Mutex::new(HashMap::default()),
+            }),
+        }
     }
 }
 

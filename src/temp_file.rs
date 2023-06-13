@@ -1,7 +1,8 @@
-use crate::{AsyncNew, CompleteWritingError, FilePath, SharedFileType};
+use crate::{AsyncNewFile, CompleteWritingError, FilePath, SharedFileType};
 use async_tempfile::TempFile;
 use std::ops::Deref;
 use std::path::PathBuf;
+use tokio::fs::File;
 
 #[async_trait::async_trait]
 impl SharedFileType for TempFile {
@@ -18,16 +19,18 @@ impl SharedFileType for TempFile {
     }
 
     async fn sync_all(&self) -> Result<(), Self::SyncError> {
-        Ok(self.deref().sync_all().await?)
+        let file: &File = self.deref();
+        Ok(file.sync_all().await?)
     }
 
     async fn sync_data(&self) -> Result<(), Self::SyncError> {
-        Ok(self.deref().sync_data().await?)
+        let file: &File = self.deref();
+        Ok(file.sync_data().await?)
     }
 }
 
 #[async_trait::async_trait]
-impl AsyncNew for TempFile {
+impl AsyncNewFile for TempFile {
     type Target = TempFile;
     type Error = async_tempfile::Error;
 
