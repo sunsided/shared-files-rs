@@ -12,7 +12,7 @@ Normally, reading a file while it is written results in the read stream ending p
 of this crate is to prevent exactly that.
 
 Any file type can be used as a backing as long as it implements the crate's `SharedFileType` trait, which in turn
-requires `AsyncWrite`, `AsyncRead` and `Unpin`.
+requires `AsyncWrite` and `AsyncRead`.
 
 ## Features
 

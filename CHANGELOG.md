@@ -9,7 +9,7 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - Added the `async-tempfile` crate feature to enable the `SharedTempFile`
   type.
-- Added the generic `SharedFile<T>` type for use with arbitrary `AsyncWrite + AsyncRead + Unpin` types.
+- Added the generic `SharedFile<T>` type for use with arbitrary `AsyncWrite + AsyncRead` types.
 
 ## [0.0.1] - 2023-06-13
 

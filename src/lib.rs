@@ -9,8 +9,7 @@
 //! as EOF; the purpose of this crate is to prevent exactly that.
 //!
 //! Any file type can be used as a backing as long as it implements the crate's [`SharedFileType`]
-//! trait, which in turn requires [`AsyncWrite`](tokio::io::AsyncWrite), [`AsyncRead`](tokio::io::AsyncRead)
-//! and [`Unpin`].
+//! trait, which in turn requires [`AsyncWrite`](tokio::io::AsyncWrite) and [`AsyncRead`](tokio::io::AsyncRead).
 //!
 //! ## Crate Features
 //!

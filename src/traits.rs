@@ -3,7 +3,7 @@ use tokio::io::{AsyncRead, AsyncWrite};
 
 /// Trait for types used as a file storage backend.
 #[async_trait::async_trait]
-pub trait SharedFileType: AsyncRead + AsyncWrite + Unpin {
+pub trait SharedFileType: AsyncRead + AsyncWrite {
     /// The type created when producing a reader or writer. Typically `Self`.
     type Type;
 
