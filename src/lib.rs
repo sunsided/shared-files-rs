@@ -30,7 +30,7 @@ mod writer;
 use crossbeam::atomic::AtomicCell;
 use std::collections::HashMap;
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex, MutexGuard};
+use std::sync::{Arc, Mutex};
 use std::task::Waker;
 use uuid::Uuid;
 
@@ -61,9 +61,9 @@ struct Sentinel<T> {
 /// The state of a file write operation.
 #[derive(Debug, Clone, Copy)]
 enum WriteState {
-    /// The write operation is pending. Contains the number of bytes written.
-    Pending(usize),
-    /// The write operation completed. Contains the file size.
+    /// The write operation is pending. Contains the committed byte count and the written byte count.
+    Pending(usize, usize),
+    /// The write operation completed. Contains the number of bytes written (and committed).
     Completed(usize),
     /// The write operation failed.
     Failed,
@@ -114,7 +114,7 @@ impl<T> From<T> for SharedFile<T> {
         Self {
             sentinel: Arc::new(Sentinel {
                 original: value,
-                state: AtomicCell::new(WriteState::Pending(0)),
+                state: AtomicCell::new(WriteState::Pending(0, 0)),
                 wakers: Mutex::new(HashMap::default()),
             }),
         }
@@ -129,7 +129,7 @@ where
         Self {
             sentinel: Arc::new(Sentinel {
                 original: T::default(),
-                state: AtomicCell::new(WriteState::Pending(0)),
+                state: AtomicCell::new(WriteState::Pending(0, 0)),
                 wakers: Mutex::new(HashMap::default()),
             }),
         }

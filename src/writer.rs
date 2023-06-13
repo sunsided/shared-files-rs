@@ -37,7 +37,10 @@ impl<T> SharedFileWriter<T> {
     where
         T: SharedFileType,
     {
-        self.file.sync_all().await
+        self.file.sync_all().await?;
+        Self::sync_committed_and_written(&self.sentinel);
+        self.sentinel.wake_readers();
+        Ok(())
     }
 
     /// Synchronizes data with the disk buffer.
@@ -45,7 +48,10 @@ impl<T> SharedFileWriter<T> {
     where
         T: SharedFileType,
     {
-        self.file.sync_data().await
+        self.file.sync_data().await?;
+        Self::sync_committed_and_written(&self.sentinel);
+        self.sentinel.wake_readers();
+        Ok(())
     }
 
     /// Completes the writing operation.
@@ -56,7 +62,7 @@ impl<T> SharedFileWriter<T> {
     where
         T: SharedFileType,
     {
-        if let Err(_) = self.file.sync_all().await {
+        if let Err(_) = self.sync_all().await {
             return Err(CompleteWritingError::SyncError);
         }
         self.complete_no_sync()
@@ -70,13 +76,25 @@ impl<T> SharedFileWriter<T> {
         self.finalize_state()
     }
 
+    /// Synchronizes the number of written bytes with the number of committed bytes.
+    fn sync_committed_and_written(sentinel: &Arc<Sentinel<T>>) {
+        match sentinel.state.load() {
+            WriteState::Pending(_committed, written) => {
+                sentinel.state.store(WriteState::Pending(written, written));
+            }
+            WriteState::Completed(_) => {}
+            WriteState::Failed => {}
+        }
+    }
+
     /// Sets the state to finalized.
     ///
     /// See also [`update_state`](Self::update_state) for increasing the byte count.
     fn finalize_state(&self) -> Result<(), CompleteWritingError> {
         let result = match self.sentinel.state.load() {
-            WriteState::Pending(size) => {
-                self.sentinel.state.store(WriteState::Completed(size));
+            WriteState::Pending(_committed, written) => {
+                debug_assert_eq!(_committed, written);
+                self.sentinel.state.store(WriteState::Completed(written));
                 Ok(())
             }
             WriteState::Completed(_) => Ok(()),
@@ -96,8 +114,9 @@ impl<T> SharedFileWriter<T> {
     /// See also [`finalize_state`](Self::finalize_state) for finalizing the write.
     fn update_state(state: &AtomicCell<WriteState>, written: usize) -> Result<usize, Error> {
         match state.load() {
-            WriteState::Pending(count) => {
-                state.store(WriteState::Pending(count + written));
+            WriteState::Pending(committed, previously_written) => {
+                let count = previously_written + written;
+                state.store(WriteState::Pending(committed, count));
                 Ok(count)
             }
             WriteState::Completed(count) => {
@@ -188,8 +207,7 @@ where
         match this.file.poll_flush(cx) {
             Poll::Ready(result) => match result {
                 Ok(()) => {
-                    // Flushing doesn't change the number of bytes written,
-                    // so we don't update the counter here.
+                    Self::sync_committed_and_written(&this.sentinel);
                     Poll::Ready(Ok(()))
                 }
                 Err(e) => {
@@ -206,8 +224,9 @@ where
         match this.file.poll_shutdown(cx) {
             Poll::Ready(result) => match result {
                 Ok(()) => {
-                    if let WriteState::Pending(count) = this.sentinel.state.load() {
-                        this.sentinel.state.store(WriteState::Completed(count));
+                    if let WriteState::Pending(_committed, written) = this.sentinel.state.load() {
+                        debug_assert_eq!(_committed, written);
+                        this.sentinel.state.store(WriteState::Completed(written));
                     }
 
                     Poll::Ready(Ok(()))
