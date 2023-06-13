@@ -22,6 +22,11 @@ path = "tests/parallel_write_read.rs"
 required-features = ["async-tempfile"]
 
 [[test]]
+name = "nodelay"
+path = "tests/nodelay.rs"
+required-features = ["async-tempfile"]
+
+[[test]]
 name = "read_exact"
 path = "tests/read_exact.rs"
 required-features = ["async-tempfile"]

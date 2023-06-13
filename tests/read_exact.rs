@@ -115,7 +115,6 @@ async fn parallel_write(file: SharedTemporaryFile) {
             let t = thread_rng().gen_range(1..1000);
             sleep(Duration::from_micros(t)).await;
 
-            // This sync will also wake up the consumers.
             writer.sync_data().await.expect("failed to sync data");
         }
     }

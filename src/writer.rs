@@ -145,7 +145,7 @@ impl<T> SharedFileWriter<T> {
         sentinel: &Sentinel<T>,
         poll: Poll<Result<usize, Error>>,
     ) -> Poll<Result<usize, Error>> {
-        let result = match poll {
+        match poll {
             Poll::Ready(result) => match result {
                 Ok(written) => match Self::update_state(&sentinel.state, written) {
                     Ok(_) => Poll::Ready(Ok(written)),
@@ -153,18 +153,11 @@ impl<T> SharedFileWriter<T> {
                 },
                 Err(e) => {
                     sentinel.state.store(WriteState::Failed);
+                    sentinel.wake_readers();
                     Poll::Ready(Err(e))
                 }
             },
             Poll::Pending => Poll::Pending,
-        };
-
-        // Wake up waiting futures.
-        if let Poll::Ready(e) = result {
-            sentinel.wake_readers();
-            Poll::Ready(e)
-        } else {
-            Poll::Pending
         }
     }
 }
@@ -214,10 +207,12 @@ where
             Poll::Ready(result) => match result {
                 Ok(()) => {
                     Self::sync_committed_and_written(&this.sentinel);
+                    this.sentinel.wake_readers();
                     Poll::Ready(Ok(()))
                 }
                 Err(e) => {
                     this.sentinel.state.store(WriteState::Failed);
+                    this.sentinel.wake_readers();
                     Poll::Ready(Err(e))
                 }
             },
