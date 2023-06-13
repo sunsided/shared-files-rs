@@ -1,32 +1,29 @@
 //! This test will slowly write a file to disk while simultaneously
 //! reading it from a different thread.
+//!
+//! Same as `parallel_write_read.rs` but without the artifical delays.
 
-use rand::{thread_rng, Rng};
-use std::time::Duration;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tokio::time::sleep;
 
 use shared_files::{FileSize, SharedTemporaryFile, SharedTemporaryFileReader};
 
 /// The number of u16 values to write.
-const NUM_VALUES_U16: usize = 65_536;
+const NUM_VALUES_U16: usize = 1_048_576;
 
 /// The number of bytes occupied by the written values.
 const NUM_BYTES: usize = NUM_VALUES_U16 * std::mem::size_of::<u16>();
 
-#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn parallel_write_read() {
+#[tokio::test(flavor = "multi_thread")]
+async fn nodelay() {
     let file = SharedTemporaryFile::new_async()
         .await
         .expect("failed to create file");
 
     // Spawn the readers first to ensure we can then move the writer.
     let reader_a = file.reader().await.expect("failed to create reader");
-    let reader_b = reader_a.fork().await.expect("failed to create reader");
 
     // The file is indeed empty.
     assert!(matches!(reader_a.file_size(), FileSize::AtLeast(0)));
-    assert!(matches!(reader_b.file_size(), FileSize::AtLeast(0)));
 
     // Attempt to read the file (nothing was written yet).
     let reader_future = tokio::spawn(parallel_read(reader_a));
@@ -41,13 +38,6 @@ async fn parallel_write_read() {
 
     // Ensure the first reader got the correct results.
     let result = reader_result.expect("reader failed");
-    validate_result(result);
-
-    // The file is not empty anymore.
-    assert!(matches!(reader_b.file_size(), FileSize::Exactly(NUM_BYTES)));
-
-    // Read from the written file.
-    let result = parallel_read(reader_b).await;
     validate_result(result);
 }
 
@@ -72,11 +62,9 @@ async fn parallel_write(file: SharedTemporaryFile) {
             .await
             .expect("failed to write");
 
-        if i % 100 == 0 {
-            let t = thread_rng().gen_range(1..1000);
-            sleep(Duration::from_micros(t)).await;
-
-            writer.sync_data().await.expect("failed to sync data");
+        // Every so often, sync to disk.
+        if i % 4096 == 0 {
+            writer.flush().await.expect("failed to sync data");
         }
     }
 
