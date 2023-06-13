@@ -30,7 +30,7 @@ mod writer;
 use crossbeam::atomic::AtomicCell;
 use std::collections::HashMap;
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, MutexGuard};
 use std::task::Waker;
 use uuid::Uuid;
 

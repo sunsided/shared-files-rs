@@ -1,24 +1,44 @@
 //! This test will slowly write a file to disk while simultaneously
 //! reading it from a different thread.
+//!
+//! Unlike `parallel_write_read.rs` this test reuses an existing file much
+//! larger than the actual data being written. This is to ensure that
+//! any spawned reader will not erroneously try to over-read the amount of
+//! bytes it should read from the file.
 
+use async_tempfile::{Ownership, TempFile};
 use rand::{thread_rng, Rng};
 use std::time::Duration;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::time::sleep;
 
-use shared_files::{FileSize, SharedTemporaryFile, SharedTemporaryFileReader};
+use shared_files::{
+    FilePath, FileSize, SharedFile, SharedTemporaryFile, SharedTemporaryFileReader,
+};
+
+/// The number of u16 values to prefill the file with.
+const NUM_PREFILL_VALUES_U16: usize = 65_536;
 
 /// The number of u16 values to write.
-const NUM_VALUES_U16: usize = 65_536;
+const NUM_VALUES_U16: usize = 1024;
 
 /// The number of bytes occupied by the written values.
 const NUM_BYTES: usize = NUM_VALUES_U16 * std::mem::size_of::<u16>();
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn parallel_write_read() {
-    let file = SharedTemporaryFile::new_async()
+async fn read_exact() {
+    let original = TempFile::new()
         .await
-        .expect("failed to create file");
+        .expect("failed to create temporary file");
+
+    // Pre-fill the original file and keep it around so it's deleted after the test.
+    let original = prefill_file(SharedFile::from(original)).await;
+
+    // Create a new wrapper around the original.
+    let file =
+        SharedTemporaryFile::from_existing(original.file_path().clone(), Ownership::Borrowed)
+            .await
+            .expect("failed to wrap the exiting file");
 
     // Spawn the readers first to ensure we can then move the writer.
     let reader_a = file.reader().await.expect("failed to create reader");
@@ -62,6 +82,22 @@ fn validate_result(read: Vec<u8>) {
         .for_each(|(i, value)| assert_eq!(value, i as u16));
 }
 
+/// Prefills the file.
+async fn prefill_file(file: SharedTemporaryFile) -> SharedTemporaryFile {
+    // Ensure the writer is dropped such that we don't mark the file as completed.
+    {
+        let mut writer = file.writer().await.expect("failed to create writer");
+        for _ in 0..NUM_PREFILL_VALUES_U16 {
+            writer
+                .write_u16_le(0 as u16)
+                .await
+                .expect("failed to write");
+        }
+    }
+
+    file
+}
+
 /// Writes with arbitrary delays.
 async fn parallel_write(file: SharedTemporaryFile) {
     let mut writer = file.writer().await.expect("failed to create writer");
@@ -84,7 +120,7 @@ async fn parallel_write(file: SharedTemporaryFile) {
     writer.complete().await.expect("failed to complete write");
 }
 
-/// Reads the file (while the writer is still active).
+/// Reads while the writer is still active.
 async fn parallel_read(mut reader: SharedTemporaryFileReader) -> Vec<u8> {
     let mut results = Vec::default();
     let mut buf = [0u8; 1024];

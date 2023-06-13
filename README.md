@@ -28,5 +28,5 @@ See [`tests/parallel_write_read.rs`](tests/parallel_write_read.rs) for a usage e
 The example requires the `async-tempfile` crate feature. To run it, use e.g.
 
 ```shell
-cargo test parallel_write_read --features=async-tempfile
+cargo test --test parallel_write_read --features=async-tempfile
 ```

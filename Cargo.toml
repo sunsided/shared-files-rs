@@ -21,6 +21,11 @@ name = "parallel_write_read"
 path = "tests/parallel_write_read.rs"
 required-features = ["async-tempfile"]
 
+[[test]]
+name = "read_exact"
+path = "tests/read_exact.rs"
+required-features = ["async-tempfile"]
+
 [dependencies]
 async-tempfile = { version = "0.3.0", optional = true }
 async-trait = "0.1.68"
