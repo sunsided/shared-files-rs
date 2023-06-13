@@ -1,5 +1,4 @@
-use crate::{Sentinel, State};
-use async_tempfile::TempFile;
+use crate::{Sentinel, SharedFileType, WriteState};
 use pin_project::{pin_project, pinned_drop};
 use std::io::{Error, ErrorKind, SeekFrom};
 use std::pin::Pin;
@@ -11,21 +10,24 @@ use uuid::Uuid;
 
 /// A reader for the shared temporary file.
 #[pin_project(PinnedDrop)]
-pub struct SharedTemporaryFileReader {
+pub struct SharedFileReader<T> {
     /// The ID of the reader.
     id: Uuid,
     /// The file to read from.
     #[pin]
-    file: TempFile,
+    file: T,
     /// The sentinel value to keep the file alive.
-    sentinel: Arc<Sentinel>,
+    sentinel: Arc<Sentinel<T>>,
 }
 
 /// These IDs never leave the current system, so the node ID is arbitrary.
 static NODE_ID: &'static [u8; 6] = &[2, 3, 0, 6, 1, 2];
 
-impl SharedTemporaryFileReader {
-    pub(crate) fn new(file: TempFile, sentinel: Arc<Sentinel>) -> Self {
+impl<T> SharedFileReader<T>
+where
+    T: SharedFileType<Type = T>,
+{
+    pub(crate) fn new(file: T, sentinel: Arc<Sentinel<T>>) -> Self {
         Self {
             id: Uuid::now_v1(&NODE_ID),
             file,
@@ -34,7 +36,7 @@ impl SharedTemporaryFileReader {
     }
 
     /// Creates a new, independent reader.
-    pub async fn fork(&self) -> Result<Self, async_tempfile::Error> {
+    pub async fn fork(&self) -> Result<Self, T::OpenError> {
         Ok(Self {
             id: Uuid::now_v1(&NODE_ID),
             file: self.sentinel.original.open_ro().await?,
@@ -43,13 +45,13 @@ impl SharedTemporaryFileReader {
     }
 }
 
-impl SharedTemporaryFileReader {
+impl<T> SharedFileReader<T> {
     /// Gets the (expected) size of the file to read.
     pub fn file_size(&self) -> FileSize {
         match self.sentinel.state.load() {
-            State::Pending(size) => FileSize::AtLeast(size),
-            State::Completed(size) => FileSize::Exactly(size),
-            State::Failed => FileSize::Error,
+            WriteState::Pending(size) => FileSize::AtLeast(size),
+            WriteState::Completed(size) => FileSize::Exactly(size),
+            WriteState::Failed => FileSize::Error,
         }
     }
 }
@@ -67,13 +69,16 @@ pub enum FileSize {
 }
 
 #[pinned_drop]
-impl PinnedDrop for SharedTemporaryFileReader {
+impl<T> PinnedDrop for SharedFileReader<T> {
     fn drop(mut self: Pin<&mut Self>) {
         self.sentinel.remove_reader_waker(&self.id)
     }
 }
 
-impl AsyncRead for SharedTemporaryFileReader {
+impl<T> AsyncRead for SharedFileReader<T>
+where
+    T: AsyncRead,
+{
     fn poll_read(
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
@@ -99,9 +104,9 @@ impl AsyncRead for SharedTemporaryFileReader {
             // If the buffer was not advanced and source file is completed (or in fail state),
             // return as-is. Otherwise, reset and wait.
             match this.sentinel.state.load() {
-                State::Pending(_) => {}
-                State::Completed(_) => return Poll::Ready(Ok(())),
-                State::Failed => {
+                WriteState::Pending(_) => {}
+                WriteState::Completed(_) => return Poll::Ready(Ok(())),
+                WriteState::Failed => {
                     return Poll::Ready(Err(Error::new(
                         ErrorKind::BrokenPipe,
                         ReadError::FileClosed,
@@ -117,7 +122,10 @@ impl AsyncRead for SharedTemporaryFileReader {
     }
 }
 
-impl AsyncSeek for SharedTemporaryFileReader {
+impl<T> AsyncSeek for SharedFileReader<T>
+where
+    T: AsyncSeek,
+{
     fn start_seek(self: Pin<&mut Self>, position: SeekFrom) -> io::Result<()> {
         let this = self.project();
         this.file.start_seek(position)

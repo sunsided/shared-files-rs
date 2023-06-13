@@ -16,7 +16,7 @@ const NUM_BYTES: usize = NUM_VALUES_U16 * std::mem::size_of::<u16>();
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn parallel_write_read() {
-    let file = SharedTemporaryFile::new()
+    let file = SharedTemporaryFile::new_async()
         .await
         .expect("failed to create file");
 

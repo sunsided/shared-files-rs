@@ -11,9 +11,19 @@ processing of byte streams with minimum (process) memory requirements, e.g. in w
 Normally, reading a file while it is written results in the read stream ending prematurely as EOF; the purpose
 of this crate is to prevent exactly that.
 
-The functionality is currently based on the [async-tempfile](https://github.com/sunsided/async-tempfile-rs) crate.
-A generic implementation is planned for the use of arbitrary `AsyncWrite` / `AsyncRead` backing.
+Any file type can be used as a backing as long as it implements the crate's `SharedFileType` trait, which in turn
+requires `AsyncWrite` and `AsyncRead`.
+
+## Features
+
+- `async-tempfile`: Enables the `SharedTemporaryFile` type via the [async-tempfile](https://github.com/sunsided/async-tempfile-rs)
+  crate. Since this is how this crate was initially meant to be used, this feature is enabled by default.
 
 ## Example
 
 See [`tests/parallel_write_read.rs`](tests/parallel_write_read.rs) for a usage example.
+The example requires the `async-tempfile` crate feature. To run it, use e.g.
+
+```shell
+cargo test parallel_write_read --features=async-tempfile
+```

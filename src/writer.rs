@@ -1,5 +1,4 @@
-use crate::{Sentinel, State};
-use async_tempfile::TempFile;
+use crate::{FilePath, Sentinel, SharedFileType, WriteState};
 use crossbeam::atomic::AtomicCell;
 use pin_project::{pin_project, pinned_drop};
 use std::io::{Error, ErrorKind, IoSlice};
@@ -12,33 +11,40 @@ use tokio::io::AsyncWrite;
 
 /// A writer for the shared temporary file.
 #[pin_project(PinnedDrop)]
-pub struct SharedTemporaryFileWriter {
+pub struct SharedFileWriter<T> {
     /// The file to write to.
     #[pin]
-    file: TempFile,
+    file: T,
     /// The sentinel value to keep the file alive.
-    sentinel: Arc<Sentinel>,
+    sentinel: Arc<Sentinel<T>>,
 }
 
-impl SharedTemporaryFileWriter {
-    pub(crate) fn new(file: TempFile, sentinel: Arc<Sentinel>) -> Self {
+impl<T> SharedFileWriter<T> {
+    pub(crate) fn new(file: T, sentinel: Arc<Sentinel<T>>) -> Self {
         Self { file, sentinel }
     }
-}
 
-impl SharedTemporaryFileWriter {
     /// Gets the file path.
-    pub async fn file_path(&self) -> &PathBuf {
+    pub async fn file_path(&self) -> &PathBuf
+    where
+        T: FilePath,
+    {
         self.file.file_path()
     }
 
     /// Synchronizes data and metadata with the disk buffer.
-    pub async fn sync_all(&self) -> Result<(), Error> {
+    pub async fn sync_all(&self) -> Result<(), T::SyncError>
+    where
+        T: SharedFileType,
+    {
         self.file.sync_all().await
     }
 
     /// Synchronizes data with the disk buffer.
-    pub async fn sync_data(&self) -> Result<(), Error> {
+    pub async fn sync_data(&self) -> Result<(), T::SyncError>
+    where
+        T: SharedFileType,
+    {
         self.file.sync_data().await
     }
 
@@ -46,8 +52,13 @@ impl SharedTemporaryFileWriter {
     ///
     /// Use [`complete_no_sync`](Self::complete_no_sync) if you do not wish
     /// to sync the file to disk.
-    pub async fn complete(self) -> Result<(), CompleteWritingError> {
-        self.file.sync_all().await?;
+    pub async fn complete(self) -> Result<(), CompleteWritingError>
+    where
+        T: SharedFileType,
+    {
+        if let Err(_) = self.file.sync_all().await {
+            return Err(CompleteWritingError::SyncError);
+        }
         self.complete_no_sync()
     }
 
@@ -64,12 +75,12 @@ impl SharedTemporaryFileWriter {
     /// See also [`update_state`](Self::update_state) for increasing the byte count.
     fn finalize_state(&self) -> Result<(), CompleteWritingError> {
         let result = match self.sentinel.state.load() {
-            State::Pending(size) => {
-                self.sentinel.state.store(State::Completed(size));
+            WriteState::Pending(size) => {
+                self.sentinel.state.store(WriteState::Completed(size));
                 Ok(())
             }
-            State::Completed(_) => Ok(()),
-            State::Failed => Err(CompleteWritingError::FileWritingFailed),
+            WriteState::Completed(_) => Ok(()),
+            WriteState::Failed => Err(CompleteWritingError::FileWritingFailed),
         };
 
         self.sentinel.wake_readers();
@@ -83,13 +94,13 @@ impl SharedTemporaryFileWriter {
     /// Returns the number of bytes written in total.
     ///
     /// See also [`finalize_state`](Self::finalize_state) for finalizing the write.
-    fn update_state(state: &AtomicCell<State>, written: usize) -> Result<usize, Error> {
+    fn update_state(state: &AtomicCell<WriteState>, written: usize) -> Result<usize, Error> {
         match state.load() {
-            State::Pending(count) => {
-                state.store(State::Pending(count + written));
+            WriteState::Pending(count) => {
+                state.store(WriteState::Pending(count + written));
                 Ok(count)
             }
-            State::Completed(count) => {
+            WriteState::Completed(count) => {
                 // Ensure we do not try to write more data after completing
                 // the file.
                 if written != 0 {
@@ -97,7 +108,7 @@ impl SharedTemporaryFileWriter {
                 }
                 Ok(count)
             }
-            State::Failed => Err(Error::from(ErrorKind::Other)),
+            WriteState::Failed => Err(Error::from(ErrorKind::Other)),
         }
     }
 
@@ -106,7 +117,7 @@ impl SharedTemporaryFileWriter {
     /// This will update the internal byte count and produce an error
     /// if the update failed.
     fn handle_poll_write_result(
-        sentinel: &Sentinel,
+        sentinel: &Sentinel<T>,
         poll: Poll<Result<usize, Error>>,
     ) -> Poll<Result<usize, Error>> {
         let result = match poll {
@@ -116,7 +127,7 @@ impl SharedTemporaryFileWriter {
                     Err(e) => Poll::Ready(Err(e)),
                 },
                 Err(e) => {
-                    sentinel.state.store(State::Failed);
+                    sentinel.state.store(WriteState::Failed);
                     Poll::Ready(Err(e))
                 }
             },
@@ -134,7 +145,7 @@ impl SharedTemporaryFileWriter {
 }
 
 #[pinned_drop]
-impl PinnedDrop for SharedTemporaryFileWriter {
+impl<T> PinnedDrop for SharedFileWriter<T> {
     fn drop(mut self: Pin<&mut Self>) {
         self.finalize_state().ok();
     }
@@ -146,6 +157,8 @@ pub enum CompleteWritingError {
     Io(#[from] Error),
     #[error("Writing to the file failed")]
     FileWritingFailed,
+    #[error("Failed to synchronize the file with the underlying buffer")]
+    SyncError,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -156,7 +169,10 @@ pub enum WriteError {
     FileClosed,
 }
 
-impl AsyncWrite for SharedTemporaryFileWriter {
+impl<T> AsyncWrite for SharedFileWriter<T>
+where
+    T: AsyncWrite,
+{
     fn poll_write(
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
@@ -177,7 +193,7 @@ impl AsyncWrite for SharedTemporaryFileWriter {
                     Poll::Ready(Ok(()))
                 }
                 Err(e) => {
-                    this.sentinel.state.store(State::Failed);
+                    this.sentinel.state.store(WriteState::Failed);
                     Poll::Ready(Err(e))
                 }
             },
@@ -190,14 +206,14 @@ impl AsyncWrite for SharedTemporaryFileWriter {
         match this.file.poll_shutdown(cx) {
             Poll::Ready(result) => match result {
                 Ok(()) => {
-                    if let State::Pending(count) = this.sentinel.state.load() {
-                        this.sentinel.state.store(State::Completed(count));
+                    if let WriteState::Pending(count) = this.sentinel.state.load() {
+                        this.sentinel.state.store(WriteState::Completed(count));
                     }
 
                     Poll::Ready(Ok(()))
                 }
                 Err(e) => {
-                    this.sentinel.state.store(State::Failed);
+                    this.sentinel.state.store(WriteState::Failed);
                     Poll::Ready(Err(e))
                 }
             },
