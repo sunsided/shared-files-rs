@@ -4,7 +4,7 @@
 
 ---
 
-Functionality for single-writer, multiple-reader file operations where multiple concurrent readers
+Functionality for asynchronous single-writer, multiple-reader file operations where multiple concurrent readers
 need to read from a file that is currently being written by the same process. The intended use case is the parallel
 processing of byte streams with minimum (process) memory requirements, e.g. in web services moving around large files.
 
@@ -12,7 +12,10 @@ Normally, reading a file while it is written results in the read stream ending p
 of this crate is to prevent exactly that.
 
 Any file type can be used as a backing as long as it implements the crate's `SharedFileType` trait, which in turn
-requires `AsyncWrite` and `AsyncRead`.
+requires [`tokio::io::AsyncWrite`] and [`tokio::io::AsyncRead`].
+
+[`tokio::io::AsyncRead`]: https://docs.rs/tokio/latest/tokio/io/trait.AsyncRead.html
+[`tokio::io::AsyncWrite`]: https://docs.rs/tokio/latest/tokio/io/trait.AsyncWrite.html
 
 ## Features
 
