@@ -3,6 +3,13 @@
 All notable changes to this project will be documented in this file.
 This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.4] - 2023-06-14
+
+### Internal
+
+- Ensure documentation can be built with `cfg(doc)`. This should resolve
+  [E0658](https://doc.rust-lang.org/error_codes/E0658.html) on docs.rs. 
+
 ## [0.0.3] - 2023-06-14
 
 ### Added

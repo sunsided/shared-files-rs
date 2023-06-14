@@ -17,6 +17,7 @@
 //!   [async-tempfile](https://github.com/sunsided/async-tempfile-rs) crate. Since this is how
 //!   this crate was initially meant to be used, this feature is enabled by default.
 
+#![cfg_attr(docsrs, feature(doc_cfg))]
 #![forbid(unsafe_code)]
 
 mod reader;
