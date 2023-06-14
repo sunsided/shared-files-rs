@@ -3,7 +3,7 @@
 All notable changes to this project will be documented in this file.
 This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## [0.0.3] - 2023-06-14
 
 ### Added
 
@@ -28,5 +28,6 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - 🎉 Initial release.
 
+[0.0.3]: https://github.com/sunsided/shared-files-rs/releases/tag/0.0.3
 [0.0.2]: https://github.com/sunsided/shared-files-rs/releases/tag/0.0.2
 [0.0.1]: https://github.com/sunsided/shared-files-rs/releases/tag/0.0.1
