@@ -13,7 +13,7 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::time::sleep;
 
 use shared_files::{
-    FilePath, FileSize, SharedFile, SharedTemporaryFile, SharedTemporaryFileReader,
+    FileSize, SharedFile, SharedTemporaryFile, SharedTemporaryFileReader,
 };
 
 /// The number of u16 values to prefill the file with.

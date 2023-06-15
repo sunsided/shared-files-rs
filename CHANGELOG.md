@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Added
+
+- Added a `file_path` method directly for `SharedTemporaryFile` so that the trait does not need to be implemented. 
+
 ## [0.0.4] - 2023-06-14
 
 ### Internal

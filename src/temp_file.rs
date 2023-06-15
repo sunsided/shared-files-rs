@@ -7,6 +7,15 @@ use std::ops::Deref;
 use std::path::PathBuf;
 use tokio::fs::File;
 
+/// A type alias for a [`SharedFile`] wrapping a [`TempFile`].
+pub type SharedTemporaryFile = SharedFile<TempFile>;
+
+/// A type alias for a [`SharedFileReader`] wrapping a [`TempFile`].
+pub type SharedTemporaryFileReader = SharedFileReader<TempFile>;
+
+/// A type alias for a [`SharedFileWriter`] wrapping a [`TempFile`].
+pub type SharedTemporaryFileWriter = SharedFileWriter<TempFile>;
+
 #[async_trait::async_trait]
 impl SharedFileType for TempFile {
     type Type = TempFile;
@@ -48,17 +57,8 @@ impl FilePath for TempFile {
     }
 }
 
-/// A type alias for a [`SharedFile`] wrapping a [`TempFile`].
-pub type SharedTemporaryFile = SharedFile<TempFile>;
-
-/// A type alias for a [`SharedFileReader`] wrapping a [`TempFile`].
-pub type SharedTemporaryFileReader = SharedFileReader<TempFile>;
-
-/// A type alias for a [`SharedFileWriter`] wrapping a [`TempFile`].
-pub type SharedTemporaryFileWriter = SharedFileWriter<TempFile>;
-
 impl SharedTemporaryFile {
-    /// Wraps a new instance of this type around an existing file. This is a convencience
+    /// Wraps a new instance of this type around an existing file. This is a convenience
     /// wrapper around [`TempFile::from_existing`] and [`SharedFile::from`].
     ///
     /// If `ownership` is set to [`Ownership::Borrowed`], this method does not take ownership of
@@ -74,5 +74,10 @@ impl SharedTemporaryFile {
     ) -> Result<SharedFile<TempFile>, async_tempfile::Error> {
         let file = TempFile::from_existing(path, ownership).await?;
         Ok(Self::from(file))
+    }
+
+    /// Returns the path of the underlying temporary file.
+    pub fn file_path(&self) -> &PathBuf {
+        self.sentinel.original.file_path()
     }
 }
