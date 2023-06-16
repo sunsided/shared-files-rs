@@ -1,6 +1,6 @@
 [package]
 name = "shared-files"
-version = "0.0.5"
+version = "0.0.6"
 description = "Single writer, multiple reader in-process file sharing"
 documentation = "https://docs.rs/shared-files"
 repository = "https://github.com/sunsided/shared-files-rs"
