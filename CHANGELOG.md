@@ -3,11 +3,18 @@
 All notable changes to this project will be documented in this file.
 This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Added
+
+- Added support for [async-tempfile]'s `uuid` crate feature via the `SharedTemporaryFile::new_with_uuid` method.
+
 ## [0.0.5] - 2023-06-16
 
 ### Added
 
-- Added a `file_path` method directly for `SharedTemporaryFile` so that the trait does not need to be implemented. 
+- Added a `file_path` method directly for `SharedTemporaryFile` so that the trait does
+  not need to be implemented. 
 
 ## [0.0.4] - 2023-06-14
 
@@ -26,8 +33,8 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
-- Added the `async-tempfile` crate feature to enable the `SharedTempFile`
-  type.
+- Added the `async-tempfile` feature to enable the `SharedTempFile` type via the
+  [async-tempfile] crate.
 - Added the generic `SharedFile<T>` type for use with arbitrary `AsyncWrite + AsyncRead` types.
 
 ### Fixed
@@ -46,3 +53,4 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 [0.0.3]: https://github.com/sunsided/shared-files-rs/releases/tag/0.0.3
 [0.0.2]: https://github.com/sunsided/shared-files-rs/releases/tag/0.0.2
 [0.0.1]: https://github.com/sunsided/shared-files-rs/releases/tag/0.0.1
+[async-tempfile]: https://crates.io/crates/async-tempfile

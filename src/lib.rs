@@ -113,7 +113,7 @@ where
     where
         T: AsyncNewFile<Target = T>,
     {
-        let file = T::new().await?;
+        let file = T::new_async().await?;
         Ok(Self::from(file))
     }
 

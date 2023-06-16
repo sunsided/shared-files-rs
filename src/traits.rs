@@ -35,7 +35,7 @@ pub trait AsyncNewFile {
     type Error;
 
     /// Creates a new instance of the type [`Target`](AsyncNewFile::Target).
-    async fn new() -> Result<Self::Target, Self::Error>;
+    async fn new_async() -> Result<Self::Target, Self::Error>;
 }
 
 /// Trait for types that can be newly constructed asynchronously.

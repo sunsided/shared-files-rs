@@ -6,6 +6,7 @@ use async_tempfile::{Ownership, TempFile};
 use std::ops::Deref;
 use std::path::PathBuf;
 use tokio::fs::File;
+use uuid::Uuid;
 
 /// A type alias for a [`SharedFile`] wrapping a [`TempFile`].
 pub type SharedTemporaryFile = SharedFile<TempFile>;
@@ -46,7 +47,7 @@ impl AsyncNewFile for TempFile {
     type Target = TempFile;
     type Error = async_tempfile::Error;
 
-    async fn new() -> Result<Self::Target, Self::Error> {
+    async fn new_async() -> Result<Self::Target, Self::Error> {
         TempFile::new().await
     }
 }
@@ -58,6 +59,17 @@ impl FilePath for TempFile {
 }
 
 impl SharedTemporaryFile {
+    /// Creates a new temporary file in the default location.
+    /// Convenience wrapper around [`TempFile::new_with_uuid`] and [`SharedFile::from`].
+    ///
+    /// ## Arguments
+    ///
+    /// * `uuid` - A UUID to use as a suffix to the file name.
+    pub async fn new_with_uuid(uuid: Uuid) -> Result<Self, async_tempfile::Error> {
+        let file = TempFile::new_with_uuid(uuid).await?;
+        Ok(Self::from(file))
+    }
+
     /// Wraps a new instance of this type around an existing file. This is a convenience
     /// wrapper around [`TempFile::from_existing`] and [`SharedFile::from`].
     ///
