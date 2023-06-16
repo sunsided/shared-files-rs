@@ -3,7 +3,7 @@
 All notable changes to this project will be documented in this file.
 This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## [0.0.5] - 2023-06-16
 
 ### Added
 
@@ -14,7 +14,7 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Internal
 
 - Ensure documentation can be built with `cfg(doc)`. This should resolve
-  [E0658](https://doc.rust-lang.org/error_codes/E0658.html) on docs.rs. 
+  [E0658](https://doc.rust-lang.org/error_codes/E0658.html) on docs.rs.
 
 ## [0.0.3] - 2023-06-14
 
@@ -41,6 +41,7 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - 🎉 Initial release.
 
+[0.0.5]: https://github.com/sunsided/shared-files-rs/releases/tag/0.0.5
 [0.0.4]: https://github.com/sunsided/shared-files-rs/releases/tag/0.0.4
 [0.0.3]: https://github.com/sunsided/shared-files-rs/releases/tag/0.0.3
 [0.0.2]: https://github.com/sunsided/shared-files-rs/releases/tag/0.0.2
