@@ -136,6 +136,9 @@ where
             let read_now = smaller_buf.filled().len();
             if read_now != read_offset {
                 // Advance the parent buffer.
+                unsafe {
+                    buf.assume_init(read_now);
+                }
                 buf.set_filled(read_now);
 
                 let read = read_so_far + (read_now - read_offset);
