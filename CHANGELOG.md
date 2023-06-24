@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.8] - 2023-06-24
+
+### Fixed
+
+- A missing initialization hint in `0.0.7` left the bug unfixed. This is now resolved.
+
 ## [0.0.7] - 2023-06-24
 
 ### Fixed
@@ -54,6 +60,7 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - 🎉 Initial release.
 
+[0.0.8]: https://github.com/sunsided/shared-files-rs/releases/tag/0.0.8
 [0.0.7]: https://github.com/sunsided/shared-files-rs/releases/tag/0.0.7
 [0.0.6]: https://github.com/sunsided/shared-files-rs/releases/tag/0.0.6
 [0.0.5]: https://github.com/sunsided/shared-files-rs/releases/tag/0.0.5
