@@ -18,7 +18,7 @@
 //!   this crate was initially meant to be used, this feature is enabled by default.
 
 #![cfg_attr(docsrs, feature(doc_cfg))]
-#![forbid(unsafe_code)]
+#![allow(unsafe_code)]
 
 mod reader;
 
