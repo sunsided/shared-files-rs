@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.7] - 2023-06-24
+
+### Fixed
+
+- Fixed an issue where the read buffer would be advanced into uninitialized space.
+
 ## [0.0.6] - 2023-06-16
 
 ### Added
@@ -48,6 +54,7 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - 🎉 Initial release.
 
+[0.0.7]: https://github.com/sunsided/shared-files-rs/releases/tag/0.0.7
 [0.0.6]: https://github.com/sunsided/shared-files-rs/releases/tag/0.0.6
 [0.0.5]: https://github.com/sunsided/shared-files-rs/releases/tag/0.0.5
 [0.0.4]: https://github.com/sunsided/shared-files-rs/releases/tag/0.0.4
