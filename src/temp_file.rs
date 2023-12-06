@@ -1,3 +1,5 @@
+//! Implementations for [`TempFile`](TempFile).
+
 use crate::errors::CompleteWritingError;
 use crate::{
     AsyncNewFile, FilePath, SharedFile, SharedFileReader, SharedFileType, SharedFileWriter,

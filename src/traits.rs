@@ -1,3 +1,6 @@
+//! Contains public traits.
+
+use crate::SharedFileWriter;
 use std::path::PathBuf;
 use tokio::io::{AsyncRead, AsyncWrite};
 

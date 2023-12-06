@@ -1,5 +1,8 @@
+//! File reading functionality, notably the [`SharedFileReader`] type.
+
 use crate::errors::ReadError;
 use crate::{Sentinel, SharedFileType, WriteState};
+use async_tempfile::TempFile;
 use pin_project::{pin_project, pinned_drop};
 use std::io::{ErrorKind, SeekFrom};
 use std::pin::Pin;

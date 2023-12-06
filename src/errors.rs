@@ -1,3 +1,5 @@
+//! Contains commonly used error types.
+
 use std::fmt::{Display, Formatter};
 use tokio::io;
 

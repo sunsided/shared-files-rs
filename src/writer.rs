@@ -1,5 +1,7 @@
+//! File writing functionality, notably the [`SharedFileWriter`] type.
+
 use crate::errors::{CompleteWritingError, WriteError};
-use crate::{FilePath, Sentinel, SharedFileType, WriteState};
+use crate::{FilePath, Sentinel, SharedFileReader, SharedFileType, WriteState};
 use crossbeam::atomic::AtomicCell;
 use pin_project::{pin_project, pinned_drop};
 use std::io::{Error, ErrorKind, IoSlice};
