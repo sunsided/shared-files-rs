@@ -1,6 +1,6 @@
+use crate::errors::CompleteWritingError;
 use crate::{
-    AsyncNewFile, CompleteWritingError, FilePath, SharedFile, SharedFileReader, SharedFileType,
-    SharedFileWriter,
+    AsyncNewFile, FilePath, SharedFile, SharedFileReader, SharedFileType, SharedFileWriter,
 };
 use async_tempfile::{Ownership, TempFile};
 use std::ops::Deref;

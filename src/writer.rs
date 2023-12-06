@@ -1,3 +1,4 @@
+use crate::errors::{CompleteWritingError, WriteError};
 use crate::{FilePath, Sentinel, SharedFileType, WriteState};
 use crossbeam::atomic::AtomicCell;
 use pin_project::{pin_project, pinned_drop};
@@ -167,24 +168,6 @@ impl<T> PinnedDrop for SharedFileWriter<T> {
     fn drop(mut self: Pin<&mut Self>) {
         self.finalize_state().ok();
     }
-}
-
-#[derive(Debug, thiserror::Error)]
-pub enum CompleteWritingError {
-    #[error(transparent)]
-    Io(#[from] Error),
-    #[error("Writing to the file failed")]
-    FileWritingFailed,
-    #[error("Failed to synchronize the file with the underlying buffer")]
-    SyncError,
-}
-
-#[derive(Debug, thiserror::Error)]
-pub enum WriteError {
-    #[error(transparent)]
-    Io(#[from] Error),
-    #[error("The file was already closed")]
-    FileClosed,
 }
 
 impl<T> AsyncWrite for SharedFileWriter<T>

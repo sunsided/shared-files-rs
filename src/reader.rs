@@ -1,6 +1,7 @@
+use crate::errors::ReadError;
 use crate::{Sentinel, SharedFileType, WriteState};
 use pin_project::{pin_project, pinned_drop};
-use std::io::{Error, ErrorKind, SeekFrom};
+use std::io::{ErrorKind, SeekFrom};
 use std::pin::Pin;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
@@ -110,7 +111,7 @@ where
                 count
             }
             WriteState::Failed => {
-                return Poll::Ready(Err(Error::new(
+                return Poll::Ready(Err(io::Error::new(
                     ErrorKind::BrokenPipe,
                     ReadError::FileClosed,
                 )))
@@ -151,7 +152,7 @@ where
                 WriteState::Pending(_, _) => {}
                 WriteState::Completed(_) => return Poll::Ready(Ok(())),
                 WriteState::Failed => {
-                    return Poll::Ready(Err(Error::new(
+                    return Poll::Ready(Err(io::Error::new(
                         ErrorKind::BrokenPipe,
                         ReadError::FileClosed,
                     )))
@@ -181,12 +182,4 @@ where
         let this = self.project();
         this.file.poll_complete(cx)
     }
-}
-
-#[derive(Debug, thiserror::Error)]
-pub enum ReadError {
-    #[error(transparent)]
-    Io(#[from] Error),
-    #[error("The file was already closed")]
-    FileClosed,
 }
