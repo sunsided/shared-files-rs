@@ -55,9 +55,7 @@ async fn parallel_write_read() {
 fn validate_result(read: Vec<u8>) {
     assert_eq!(read.len(), NUM_BYTES);
     read.chunks_exact(2)
-        .into_iter()
         .map(|a| u16::from_ne_bytes([a[0], a[1]]))
-        .into_iter()
         .enumerate()
         .for_each(|(i, value)| assert_eq!(value, i as u16));
 }

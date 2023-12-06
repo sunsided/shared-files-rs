@@ -25,7 +25,7 @@ pub struct SharedFileReader<T> {
 }
 
 /// These IDs never leave the current system, so the node ID is arbitrary.
-static NODE_ID: &'static [u8; 6] = &[2, 3, 0, 6, 1, 2];
+static NODE_ID: &[u8; 6] = &[2, 3, 0, 6, 1, 2];
 
 impl<T> SharedFileReader<T>
 where
@@ -33,7 +33,7 @@ where
 {
     pub(crate) fn new(file: T, sentinel: Arc<Sentinel<T>>) -> Self {
         Self {
-            id: Uuid::now_v1(&NODE_ID),
+            id: Uuid::now_v1(NODE_ID),
             file,
             sentinel,
             read: AtomicUsize::new(0),
@@ -43,7 +43,7 @@ where
     /// Creates a new, independent reader.
     pub async fn fork(&self) -> Result<Self, T::OpenError> {
         Ok(Self {
-            id: Uuid::now_v1(&NODE_ID),
+            id: Uuid::now_v1(NODE_ID),
             file: self.sentinel.original.open_ro().await?,
             sentinel: self.sentinel.clone(),
             read: AtomicUsize::new(0),
@@ -97,8 +97,7 @@ where
                 // If the number of committed bytes is the same as the number
                 // of bytes we have already read, try again later.
                 if read_so_far == committed {
-                    self.sentinel
-                        .register_reader_waker(self.id.clone(), cx.waker());
+                    self.sentinel.register_reader_waker(self.id, cx.waker());
                     return Poll::Pending;
                 }
                 committed
@@ -127,7 +126,7 @@ where
         let this = self.project();
 
         if let Poll::Ready(result) = this.file.poll_read(cx, &mut smaller_buf) {
-            this.sentinel.remove_reader_waker(&this.id);
+            this.sentinel.remove_reader_waker(this.id);
             if let Err(e) = result {
                 return Poll::Ready(Err(e));
             }
@@ -165,7 +164,7 @@ where
 
         // Re-register waker and try again.
         this.sentinel
-            .register_reader_waker(this.id.clone(), cx.waker());
+            .register_reader_waker(*this.id, cx.waker());
         Poll::Pending
     }
 }

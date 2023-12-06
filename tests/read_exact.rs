@@ -75,9 +75,7 @@ async fn read_exact() {
 fn validate_result(read: Vec<u8>) {
     assert_eq!(read.len(), NUM_BYTES);
     read.chunks_exact(2)
-        .into_iter()
         .map(|a| u16::from_ne_bytes([a[0], a[1]]))
-        .into_iter()
         .enumerate()
         .for_each(|(i, value)| assert_eq!(value, i as u16));
 }
@@ -89,7 +87,7 @@ async fn prefill_file(file: SharedTemporaryFile) -> SharedTemporaryFile {
         let mut writer = file.writer().await.expect("failed to create writer");
         for _ in 0..NUM_PREFILL_VALUES_U16 {
             writer
-                .write_u16_le(0 as u16)
+                .write_u16_le(0_u16)
                 .await
                 .expect("failed to write");
         }

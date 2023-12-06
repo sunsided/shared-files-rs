@@ -68,7 +68,7 @@ impl<T> SharedFileWriter<T> {
     where
         T: SharedFileType,
     {
-        if let Err(_) = self.sync_all().await {
+        if self.sync_all().await.is_err() {
             return Err(CompleteWritingError::SyncError);
         }
         self.complete_no_sync()
@@ -198,7 +198,7 @@ where
     ) -> Poll<io::Result<usize>> {
         let this = self.project();
         let poll = this.file.poll_write(cx, buf);
-        Self::handle_poll_write_result(&this.sentinel, poll)
+        Self::handle_poll_write_result(this.sentinel, poll)
     }
 
     fn poll_flush(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<()>> {
@@ -206,7 +206,7 @@ where
         match this.file.poll_flush(cx) {
             Poll::Ready(result) => match result {
                 Ok(()) => {
-                    Self::sync_committed_and_written(&this.sentinel);
+                    Self::sync_committed_and_written(this.sentinel);
                     this.sentinel.wake_readers();
                     Poll::Ready(Ok(()))
                 }
@@ -248,7 +248,7 @@ where
     ) -> Poll<Result<usize, Error>> {
         let this = self.project();
         let poll = this.file.poll_write_vectored(cx, bufs);
-        Self::handle_poll_write_result(&this.sentinel, poll)
+        Self::handle_poll_write_result(this.sentinel, poll)
     }
 
     fn is_write_vectored(&self) -> bool {
