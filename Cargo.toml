@@ -32,17 +32,17 @@ path = "tests/read_exact.rs"
 required-features = ["async-tempfile"]
 
 [dependencies]
-async-tempfile = { version = "0.4.0", optional = true, features = ["uuid"] }
-async-trait = "0.1.68"
+async-tempfile = { version = "0.5.0", optional = true, features = ["uuid"] }
+async-trait = "0.1.74"
 crossbeam = "0.8.2"
-pin-project = "1.1.0"
-thiserror = "1.0.40"
-tokio = { version = "1.28.2", features = ["fs"] }
-uuid = { version = "1.3.4", features = ["rng", "v1"] }
+pin-project = "1.1.3"
+thiserror = "1.0.50"
+tokio = { version = "1.34.0", features = ["fs"] }
+uuid = { version = "1.6.1", features = ["rng", "v1"] }
 
 [dev-dependencies]
 rand = "0.8.5"
-tokio = { version = "1.28.2", features = ["rt", "macros", "rt-multi-thread", "io-util", "time"] }
+tokio = { version = "1.34.0", features = ["rt", "macros", "rt-multi-thread", "io-util", "time"] }
 
 [package.metadata.docs.rs]
 all-features = true
