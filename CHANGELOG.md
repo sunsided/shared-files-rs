@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Internal
+
+- Upgraded to `async-tempfile` version `0.5.0`.
+
 ## [0.0.8] - 2023-06-24
 
 ### Fixed

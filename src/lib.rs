@@ -67,7 +67,7 @@ pub use temp_file::*;
 /// [`WriteState::Completed`]. It is important to note that drop is not asynchronous
 /// and therefore no flush to disk can be performed on the wrapped file.
 ///
-/// ⚠️ **User code must make sure to manually sync to disk before dropping the writer.**
+/// <div class="warning">User code must make sure to manually sync to disk before dropping the writer.</div>
 #[derive(Debug)]
 pub struct SharedFile<T> {
     /// The sentinel value to keep the file alive.
@@ -129,7 +129,7 @@ where
     ///
     /// ## Writer finalization
     ///
-    /// ⚠️ **User code must make sure to manually sync to disk before dropping the writer.**
+    /// <div class="warning">User code must make sure to manually sync to disk before dropping the writer.</div>
     ///
     /// When a writer is dropped, it will move the state of the [`SharedFile`] to
     /// [`WriteState::Completed`]. It is important to note that drop is not asynchronous
