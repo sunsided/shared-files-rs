@@ -1,3 +1,5 @@
+//! Contains public traits.
+
 use std::path::PathBuf;
 use tokio::io::{AsyncRead, AsyncWrite};
 

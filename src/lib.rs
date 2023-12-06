@@ -22,6 +22,7 @@
 
 mod reader;
 
+mod errors;
 #[cfg_attr(docsrs, doc(cfg(feature = "async-tempfile")))]
 #[cfg(feature = "async-tempfile")]
 mod temp_file;
@@ -35,12 +36,13 @@ use std::sync::{Arc, Mutex};
 use std::task::Waker;
 use uuid::Uuid;
 
-pub use reader::{FileSize, ReadError, SharedFileReader};
+pub use reader::{FileSize, SharedFileReader};
 pub use traits::*;
-pub use writer::{CompleteWritingError, SharedFileWriter, WriteError};
+pub use writer::SharedFileWriter;
 
 /// Prelude for commonly used types and traits.
 pub mod prelude {
+    pub use crate::errors::*;
     pub use crate::traits::*;
     pub use crate::SharedFile;
 
