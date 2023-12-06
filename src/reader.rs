@@ -163,8 +163,7 @@ where
         buf.advance(0);
 
         // Re-register waker and try again.
-        this.sentinel
-            .register_reader_waker(*this.id, cx.waker());
+        this.sentinel.register_reader_waker(*this.id, cx.waker());
         Poll::Pending
     }
 }

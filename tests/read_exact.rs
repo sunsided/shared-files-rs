@@ -12,9 +12,7 @@ use std::time::Duration;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::time::sleep;
 
-use shared_files::{
-    FileSize, SharedFile, SharedTemporaryFile, SharedTemporaryFileReader,
-};
+use shared_files::{FileSize, SharedFile, SharedTemporaryFile, SharedTemporaryFileReader};
 
 /// The number of u16 values to prefill the file with.
 const NUM_PREFILL_VALUES_U16: usize = 65_536;
@@ -86,10 +84,7 @@ async fn prefill_file(file: SharedTemporaryFile) -> SharedTemporaryFile {
     {
         let mut writer = file.writer().await.expect("failed to create writer");
         for _ in 0..NUM_PREFILL_VALUES_U16 {
-            writer
-                .write_u16_le(0_u16)
-                .await
-                .expect("failed to write");
+            writer.write_u16_le(0_u16).await.expect("failed to write");
         }
 
         // Ensure data is flushed to disk.
