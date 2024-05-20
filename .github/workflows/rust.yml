@@ -14,9 +14,16 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
+        rust: ['stable', '1.68.0']
         features: [[], ["--all-features"], ["--no-default-features"]]
     steps:
       - uses: actions/checkout@v3
+      - name: Setup Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: ${{ matrix.rust }}
+          override: true
       - name: Check Formatting
         run: cargo fmt --check
       - name: Clippy
