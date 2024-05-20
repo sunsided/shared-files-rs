@@ -207,7 +207,7 @@ impl<T> Sentinel<T> {
             .expect("failed to lock waker vector for reading");
 
         lock.entry(id)
-            .and_modify(|e| *e = waker.clone())
+            .and_modify(|e| e.clone_from(waker))
             .or_insert(waker.clone());
     }
 

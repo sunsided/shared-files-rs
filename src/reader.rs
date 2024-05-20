@@ -89,11 +89,11 @@ impl FileSize {
 
     /// Returns the exact file size if it is known, or [`None`] otherwise.
     pub fn exact_size(&self) -> Option<usize> {
-        return if let Self::Exactly(len) = self {
+        if let Self::Exactly(len) = self {
             Some(*len)
         } else {
             None
-        };
+        }
     }
 }
 
