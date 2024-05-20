@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Added
+
+- Added the `exact_size` and `minimum_size` methods to the `FileSize` type.
+
 ## [0.1.0] - 2023-12-06
 
 ### Internal
@@ -33,7 +39,7 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 
 - Added a `file_path` method directly for `SharedTemporaryFile` so that the trait does
-  not need to be implemented. 
+  not need to be implemented.
 
 ## [0.0.4] - 2023-06-14
 
@@ -68,12 +74,21 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - 🎉 Initial release.
 
 [0.1.0]: https://github.com/sunsided/shared-files-rs/releases/tag/0.1.0
+
 [0.0.8]: https://github.com/sunsided/shared-files-rs/releases/tag/0.0.8
+
 [0.0.7]: https://github.com/sunsided/shared-files-rs/releases/tag/0.0.7
+
 [0.0.6]: https://github.com/sunsided/shared-files-rs/releases/tag/0.0.6
+
 [0.0.5]: https://github.com/sunsided/shared-files-rs/releases/tag/0.0.5
+
 [0.0.4]: https://github.com/sunsided/shared-files-rs/releases/tag/0.0.4
+
 [0.0.3]: https://github.com/sunsided/shared-files-rs/releases/tag/0.0.3
+
 [0.0.2]: https://github.com/sunsided/shared-files-rs/releases/tag/0.0.2
+
 [0.0.1]: https://github.com/sunsided/shared-files-rs/releases/tag/0.0.1
+
 [async-tempfile]: https://crates.io/crates/async-tempfile

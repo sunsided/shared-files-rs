@@ -77,6 +77,26 @@ pub enum FileSize {
     Error,
 }
 
+impl FileSize {
+    /// Returns the minimum or exact file size if it is known, or [`None`] otherwise.
+    pub fn minimum_size(&self) -> Option<usize> {
+        if let Self::AtLeast(len) = self {
+            Some(*len)
+        } else {
+            self.exact_size()
+        }
+    }
+
+    /// Returns the exact file size if it is known, or [`None`] otherwise.
+    pub fn exact_size(&self) -> Option<usize> {
+        return if let Self::Exactly(len) = self {
+            Some(*len)
+        } else {
+            None
+        };
+    }
+}
+
 #[pinned_drop]
 impl<T> PinnedDrop for SharedFileReader<T> {
     fn drop(mut self: Pin<&mut Self>) {
@@ -183,5 +203,24 @@ where
     fn poll_complete(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<u64>> {
         let this = self.project();
         this.file.poll_complete(cx)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_exact_size() {
+        assert_eq!(FileSize::Exactly(42).exact_size(), Some(42));
+        assert_eq!(FileSize::AtLeast(41).exact_size(), None);
+        assert_eq!(FileSize::Error.exact_size(), None);
+    }
+
+    #[test]
+    fn test_minimum_size() {
+        assert_eq!(FileSize::Exactly(42).minimum_size(), Some(42));
+        assert_eq!(FileSize::AtLeast(41).minimum_size(), Some(41));
+        assert_eq!(FileSize::Error.minimum_size(), None);
     }
 }
