@@ -3,6 +3,25 @@
 All notable changes to this project will be documented in this file.
 This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-06-06
+
+[0.3.0]: https://github.com/sunsided/shared-files-rs/releases/tag/v0.3.0
+
+### Fixed
+
+- Readers parked after consuming all committed bytes are now woken when the writer is
+  finalized through `AsyncWrite::poll_shutdown`, instead of hanging.
+- Fixed a lost-wakeup race where a reader could stall if the writer committed more bytes
+  between the reader's state check and its waker registration.
+- Fixed read-buffer accounting for multi-poll reads (`read_exact` / `read_to_end`) that span
+  a commit boundary, which could surface as a spurious `UnexpectedEof`.
+- The writer no longer panics in `Drop`; the unsynced-bytes check is now a `debug_assert!`.
+
+### Changed
+
+- Raised the minimum supported Rust version to `1.95.0` and moved to edition 2024.
+- Updated dependencies, including the public `async-tempfile` dependency from `0.5` to `0.7`.
+
 ## [0.2.0] - 2024-05-20
 
 [0.2.0]: https://github.com/sunsided/shared-files-rs/releases/tag/v0.2.0
