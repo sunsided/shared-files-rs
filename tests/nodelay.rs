@@ -3,7 +3,7 @@
 //!
 //! Same as `parallel_write_read.rs` but without the artifical delays.
 
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::io::{AsyncReadExt, AsyncWriteExt, BufWriter};
 
 use shared_files::{FileSize, SharedTemporaryFile, SharedTemporaryFileReader};
 
@@ -50,9 +50,15 @@ fn validate_result(read: Vec<u8>) {
         .for_each(|(i, value)| assert_eq!(value, i as u16));
 }
 
-/// Writes with arbitrary delays.
+/// Writes the values as fast as possible.
 async fn parallel_write(file: SharedTemporaryFile) {
-    let mut writer = file.writer().await.expect("failed to create writer");
+    let writer = file.writer().await.expect("failed to create writer");
+
+    // tokio::fs::File is unbuffered and backed by the blocking pool, so a 2-byte
+    // write per value would be ~1M syscalls. Buffer the writes and only push to
+    // the shared writer on flush; each flush still commits the bytes and wakes
+    // any parked readers.
+    let mut writer = BufWriter::new(writer);
 
     for i in 0..NUM_VALUES_U16 {
         writer
@@ -60,13 +66,22 @@ async fn parallel_write(file: SharedTemporaryFile) {
             .await
             .expect("failed to write");
 
-        // Every so often, sync to disk.
+        // Every so often, drain the buffer to the shared writer so readers can
+        // make progress.
         if i % 4096 == 0 {
             writer.flush().await.expect("failed to sync data");
         }
     }
 
-    writer.complete().await.expect("failed to complete write");
+    // Drain any remaining buffered bytes before finalizing the shared writer.
+    // `complete` is an inherent method on `SharedFileWriter`, so recover it from
+    // the BufWriter once the buffer is empty.
+    writer.flush().await.expect("failed to flush");
+    writer
+        .into_inner()
+        .complete()
+        .await
+        .expect("failed to complete write");
 }
 
 /// Reads the file (while the writer is still active).
