@@ -7,7 +7,7 @@
 //! bytes it should read from the file.
 
 use async_tempfile::{Ownership, TempFile};
-use rand::{Rng, rng};
+use rand::{RngExt, rng};
 use std::time::Duration;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::time::sleep;

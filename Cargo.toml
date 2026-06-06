@@ -42,16 +42,16 @@ path = "tests/shutdown_wakes_readers.rs"
 required-features = ["async-tempfile"]
 
 [dependencies]
-async-tempfile = { version = "0.7.0", optional = true, features = ["uuid"] }
+async-tempfile = { version = "0.8.0", optional = true, features = ["uuid"] }
 async-trait = "0.1.89"
 crossbeam = "0.8.4"
-pin-project = "1.1.10"
-tokio = { version = "1.38.2", features = ["fs"] }
-uuid = { version = "1.20.0", features = ["rng", "v1"] }
+pin-project = "1.1.13"
+tokio = { version = "1.52.3", features = ["fs"] }
+uuid = { version = "1.23.2", features = ["rng", "v1"] }
 
 [dev-dependencies]
-rand = "0.9.4"
-tokio = { version = "1.38.2", features = ["rt", "macros", "rt-multi-thread", "io-util", "time"] }
+rand = "0.10.1"
+tokio = { version = "1.52.3", features = ["rt", "macros", "rt-multi-thread", "io-util", "time"] }
 
 [package.metadata.docs.rs]
 all-features = true
