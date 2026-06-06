@@ -71,12 +71,17 @@ tasks:
       - cargo build --release --all-features
 
   test:
-    desc: Run the test suite (all features)
+    desc: Run the test suite (all features, via nextest)
     preconditions:
       - sh: command -v cargo
         msg: "cargo not found — install Rust from https://rustup.rs/"
+      - sh: command -v cargo-nextest
+        msg: "cargo-nextest not found — cargo install cargo-nextest"
     cmds:
-      - cargo test --all-targets --all-features {{.CLI_ARGS}}
+      # nextest runs test binaries in parallel with live progress, so a slow
+      # test (e.g. nodelay) no longer looks like a hang. It does not run
+      # doctests; use `task test:doc` (included in `task ci`) for those.
+      - cargo nextest run --all-features {{.CLI_ARGS}}
 
   test:doc:
     desc: Run doctests (all features)
