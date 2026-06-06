@@ -3,6 +3,19 @@
 All notable changes to this project will be documented in this file.
 This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-06-06
+
+[0.4.0]: https://github.com/sunsided/shared-files-rs/releases/tag/v0.4.0
+
+### Changed
+
+- Updated the public `async-tempfile` dependency from `0.7` to `0.8`.
+
+### Internal
+
+- Updated `tokio`, `uuid`, and `pin-project`, and the dev-dependency `rand` (`0.9` -> `0.10`).
+- CI now verifies the crate builds and tests on both stable and the MSRV (`1.95.0`).
+
 ## [0.3.0] - 2026-06-06
 
 [0.3.0]: https://github.com/sunsided/shared-files-rs/releases/tag/v0.3.0
