@@ -9,8 +9,8 @@ categories = ["filesystem"]
 keywords = ["file-access", "async"]
 readme = "README.md"
 authors = ["Markus Mayer"]
-edition = "2021"
-rust-version = "1.68.0"
+edition = "2024"
+rust-version = "1.95.0"
 
 [features]
 default = ["async-tempfile"]
@@ -32,16 +32,16 @@ path = "tests/read_exact.rs"
 required-features = ["async-tempfile"]
 
 [dependencies]
-async-tempfile = { version = "0.5.0", optional = true, features = ["uuid"] }
-async-trait = "0.1.80"
+async-tempfile = { version = "0.7.0", optional = true, features = ["uuid"] }
+async-trait = "0.1.89"
 crossbeam = "0.8.4"
-pin-project = "1.1.5"
-tokio = { version = "1.37.0", features = ["fs"] }
-uuid = { version = "1.8.0", features = ["rng", "v1"] }
+pin-project = "1.1.10"
+tokio = { version = "1.38.2", features = ["fs"] }
+uuid = { version = "1.20.0", features = ["rng", "v1"] }
 
 [dev-dependencies]
-rand = "0.8.5"
-tokio = { version = "1.37.0", features = ["rt", "macros", "rt-multi-thread", "io-util", "time"] }
+rand = "0.9.4"
+tokio = { version = "1.38.2", features = ["rt", "macros", "rt-multi-thread", "io-util", "time"] }
 
 [package.metadata.docs.rs]
 all-features = true

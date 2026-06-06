@@ -5,8 +5,8 @@ use crate::{Sentinel, SharedFileType, WriteState};
 use pin_project::{pin_project, pinned_drop};
 use std::io::{ErrorKind, SeekFrom};
 use std::pin::Pin;
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::task::{Context, Poll};
 use tokio::io;
 use tokio::io::{AsyncRead, AsyncSeek, ReadBuf};
@@ -136,7 +136,7 @@ where
                 return Poll::Ready(Err(io::Error::new(
                     ErrorKind::BrokenPipe,
                     ReadError::FileClosed,
-                )))
+                )));
             }
         };
 
@@ -177,7 +177,7 @@ where
                     return Poll::Ready(Err(io::Error::new(
                         ErrorKind::BrokenPipe,
                         ReadError::FileClosed,
-                    )))
+                    )));
                 }
             }
         }

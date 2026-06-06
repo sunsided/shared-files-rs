@@ -42,9 +42,9 @@ pub use writer::SharedFileWriter;
 
 /// Prelude for commonly used types and traits.
 pub mod prelude {
+    pub use crate::SharedFile;
     pub use crate::errors::*;
     pub use crate::traits::*;
-    pub use crate::SharedFile;
 
     #[cfg_attr(docsrs, doc(cfg(feature = "async-tempfile")))]
     #[cfg(feature = "async-tempfile")]

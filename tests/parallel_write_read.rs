@@ -1,7 +1,7 @@
 //! This test will slowly write a file to disk while simultaneously
 //! reading it from a different thread.
 
-use rand::{thread_rng, Rng};
+use rand::{Rng, rng};
 use std::time::Duration;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::time::sleep;
@@ -71,7 +71,7 @@ async fn parallel_write(file: SharedTemporaryFile) {
             .expect("failed to write");
 
         if i % 100 == 0 {
-            let t = thread_rng().gen_range(1..1000);
+            let t = rng().random_range(1..1000);
             sleep(Duration::from_micros(t)).await;
 
             writer.sync_data().await.expect("failed to sync data");

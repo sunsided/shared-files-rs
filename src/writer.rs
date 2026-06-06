@@ -102,7 +102,10 @@ impl<T> SharedFileWriter<T> {
     fn finalize_state(&self) -> Result<(), CompleteWritingError> {
         let result = match self.sentinel.state.load() {
             WriteState::Pending(_committed, written) => {
-                assert_eq!(_committed, written, "The number of committed bytes is less than the number of written bytes - call sync before dropping");
+                assert_eq!(
+                    _committed, written,
+                    "The number of committed bytes is less than the number of written bytes - call sync before dropping"
+                );
                 self.sentinel.state.store(WriteState::Completed(written));
                 Ok(())
             }
