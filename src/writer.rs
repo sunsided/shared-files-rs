@@ -86,6 +86,12 @@ impl<T> SharedFileWriter<T> {
     }
 
     /// Synchronizes the number of written bytes with the number of committed bytes.
+    ///
+    /// The `load` + `store` here is not an atomic read-modify-write. It is only
+    /// sound because the crate's contract guarantees a single writer: the borrow
+    /// checker prevents a concurrent `&mut self` write and `&self` sync on the
+    /// same writer, so no other task mutates the state in between. Readers only
+    /// ever load the state, never store it.
     fn sync_committed_and_written(sentinel: &Arc<Sentinel<T>>) {
         match sentinel.state.load() {
             WriteState::Pending(_committed, written) => {
@@ -102,7 +108,10 @@ impl<T> SharedFileWriter<T> {
     fn finalize_state(&self) -> Result<(), CompleteWritingError> {
         let result = match self.sentinel.state.load() {
             WriteState::Pending(_committed, written) => {
-                assert_eq!(
+                // This is called from `Drop` (via `PinnedDrop`), so a hard
+                // `assert!` here could abort the process on a double panic.
+                // Mirror `poll_shutdown` and only check in debug builds.
+                debug_assert_eq!(
                     _committed, written,
                     "The number of committed bytes is less than the number of written bytes - call sync before dropping"
                 );
@@ -218,10 +227,14 @@ where
                         this.sentinel.state.store(WriteState::Completed(written));
                     }
 
+                    // Readers parked in `Pending` must be woken so they can
+                    // observe the completed state instead of hanging forever.
+                    this.sentinel.wake_readers();
                     Poll::Ready(Ok(()))
                 }
                 Err(e) => {
                     this.sentinel.state.store(WriteState::Failed);
+                    this.sentinel.wake_readers();
                     Poll::Ready(Err(e))
                 }
             },

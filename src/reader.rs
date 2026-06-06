@@ -58,7 +58,7 @@ impl<T> SharedFileReader<T> {
     /// Gets the (expected) size of the file to read.
     pub fn file_size(&self) -> FileSize {
         match self.sentinel.state.load() {
-            WriteState::Pending(commited, _written) => FileSize::AtLeast(commited),
+            WriteState::Pending(committed, _written) => FileSize::AtLeast(committed),
             WriteState::Completed(size) => FileSize::Exactly(size),
             WriteState::Failed => FileSize::Error,
         }
@@ -115,28 +115,42 @@ where
     ) -> Poll<io::Result<()>> {
         let read_so_far = self.read.load(Ordering::Acquire);
 
-        let current_total = match self.sentinel.state.load() {
-            WriteState::Pending(committed, _written) => {
-                // If the number of committed bytes is the same as the number
-                // of bytes we have already read, try again later.
-                if read_so_far == committed {
+        let current_total = loop {
+            match self.sentinel.state.load() {
+                WriteState::Pending(committed, _written) => {
+                    // If there is new committed data, read it.
+                    if read_so_far != committed {
+                        break committed;
+                    }
+
+                    // We are caught up with the committed data. Register our
+                    // waker *before* re-checking the state: a writer that
+                    // commits more bytes (and drains the waker map) between the
+                    // load above and this registration would otherwise leave us
+                    // parked with no pending wake-up. By registering first and
+                    // then re-loading, we either observe the new data now or are
+                    // guaranteed to be woken later.
                     self.sentinel.register_reader_waker(self.id, cx.waker());
-                    return Poll::Pending;
+                    if let WriteState::Pending(committed, _) = self.sentinel.state.load()
+                        && read_so_far == committed
+                    {
+                        return Poll::Pending;
+                    }
+                    // The state advanced after registering; re-evaluate it.
                 }
-                committed
-            }
-            WriteState::Completed(count) => {
-                // If we have read all there is, we're done.
-                if read_so_far == count {
-                    return Poll::Ready(Ok(()));
+                WriteState::Completed(count) => {
+                    // If we have read all there is, we're done.
+                    if read_so_far == count {
+                        return Poll::Ready(Ok(()));
+                    }
+                    break count;
                 }
-                count
-            }
-            WriteState::Failed => {
-                return Poll::Ready(Err(io::Error::new(
-                    ErrorKind::BrokenPipe,
-                    ReadError::FileClosed,
-                )));
+                WriteState::Failed => {
+                    return Poll::Ready(Err(io::Error::new(
+                        ErrorKind::BrokenPipe,
+                        ReadError::FileClosed,
+                    )));
+                }
             }
         };
 
@@ -157,11 +171,15 @@ where
             // If the buffer was advanced, return the result.
             let read_now = smaller_buf.filled().len();
             if read_now != read_offset {
-                // Advance the parent buffer.
+                // Advance the parent buffer. `read_now` is the number of bytes
+                // read into the `take`d sub-buffer, which maps onto the parent's
+                // unfilled region. Use the relative `advance` (not `set_filled`,
+                // which takes an absolute length) so that bytes already present
+                // in the parent buffer from an earlier poll are preserved.
                 unsafe {
                     buf.assume_init(read_now);
                 }
-                buf.set_filled(read_now);
+                buf.advance(read_now);
 
                 let read = read_so_far + (read_now - read_offset);
                 this.read.store(read, Ordering::Release);
@@ -181,9 +199,6 @@ where
                 }
             }
         }
-
-        // "Advance" the parent buffer.
-        buf.advance(0);
 
         // Re-register waker and try again.
         this.sentinel.register_reader_waker(*this.id, cx.waker());
