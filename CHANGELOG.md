@@ -3,6 +3,21 @@
 All notable changes to this project will be documented in this file.
 This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Changed
+
+- **Breaking:** Dropping a `SharedFileWriter` without completing it through `complete`,
+  `complete_no_sync` or `AsyncWriteExt::shutdown` now marks the write as failed. Readers
+  receive a `BrokenPipe` error instead of observing a possibly truncated file as complete.
+  Code that relied on dropping the writer to complete the file must call `complete` or
+  `complete_no_sync` instead.
+
+### Fixed
+
+- Dropping a writer with written but unsynced bytes no longer trips a debug assertion,
+  which panicked e.g. when a producing task was cancelled mid-write.
+
 ## [0.4.0] - 2026-06-06
 
 [0.4.0]: https://github.com/sunsided/shared-files-rs/releases/tag/v0.4.0

@@ -16,9 +16,11 @@ use tokio::io::AsyncWrite;
 ///
 /// ## Dropping the writer
 ///
-/// Note that while dropping the writer while implicitly change it to "completed",
-/// you must manually call [`SharedFileWriter::sync_all`] or [`SharedFileWriter::sync_data`]
-/// to ensure all content is flushed to the underlying buffer.
+/// A writer must be completed explicitly through [`SharedFileWriter::complete`],
+/// [`SharedFileWriter::complete_no_sync`] or `AsyncWriteExt::shutdown`.
+/// Dropping a writer that was not completed (e.g. because the producing task was
+/// cancelled) marks the write as failed: readers receive an error instead of
+/// mistaking a truncated file for a complete one.
 #[pin_project(PinnedDrop)]
 pub struct SharedFileWriter<T> {
     /// The file to write to.
@@ -108,12 +110,11 @@ impl<T> SharedFileWriter<T> {
     fn finalize_state(&self) -> Result<(), CompleteWritingError> {
         let result = match self.sentinel.state.load() {
             WriteState::Pending(_committed, written) => {
-                // This is called from `Drop` (via `PinnedDrop`), so a hard
-                // `assert!` here could abort the process on a double panic.
-                // Mirror `poll_shutdown` and only check in debug builds.
+                // Completing with unsynced bytes is a caller bug. Mirror
+                // `poll_shutdown` and only check in debug builds.
                 debug_assert_eq!(
                     _committed, written,
-                    "The number of committed bytes is less than the number of written bytes - call sync before dropping"
+                    "The number of committed bytes is less than the number of written bytes - call sync before completing"
                 );
                 self.sentinel.state.store(WriteState::Completed(written));
                 Ok(())
@@ -179,8 +180,13 @@ impl<T> SharedFileWriter<T> {
 
 #[pinned_drop]
 impl<T> PinnedDrop for SharedFileWriter<T> {
-    fn drop(mut self: Pin<&mut Self>) {
-        self.finalize_state().ok();
+    fn drop(self: Pin<&mut Self>) {
+        // A writer dropped without being completed was abandoned. Fail the write
+        // so that readers do not observe a truncated file as complete.
+        if let WriteState::Pending(_, _) = self.sentinel.state.load() {
+            self.sentinel.state.store(WriteState::Failed);
+            self.sentinel.wake_readers();
+        }
     }
 }
 

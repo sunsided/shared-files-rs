@@ -65,11 +65,11 @@ pub use temp_file::*;
 /// the readers attempt to read it back.
 ///
 /// ## Writer Finalization
-/// When a writer is dropped, it will move the state of the [`SharedFile`] to
-/// [`WriteState::Completed`]. It is important to note that drop is not asynchronous
-/// and therefore no flush to disk can be performed on the wrapped file.
-///
-/// <div class="warning">User code must make sure to manually sync to disk before dropping the writer.</div>
+/// A writer must be completed explicitly through [`SharedFileWriter::complete`],
+/// [`SharedFileWriter::complete_no_sync`] or `AsyncWriteExt::shutdown`.
+/// When a writer is dropped without being completed, the write is considered
+/// abandoned and the state of the [`SharedFile`] moves to a failed state;
+/// readers then receive an error instead of a truncated file.
 #[derive(Debug)]
 pub struct SharedFile<T> {
     /// The sentinel value to keep the file alive.
@@ -131,11 +131,10 @@ where
     ///
     /// ## Writer finalization
     ///
-    /// <div class="warning">User code must make sure to manually sync to disk before dropping the writer.</div>
-    ///
-    /// When a writer is dropped, it will move the state of the [`SharedFile`] to
-    /// [`WriteState::Completed`]. It is important to note that drop is not asynchronous
-    /// and therefore no flush to disk can be performed on the wrapped file.
+    /// The writer must be completed explicitly through [`SharedFileWriter::complete`],
+    /// [`SharedFileWriter::complete_no_sync`] or `AsyncWriteExt::shutdown`.
+    /// Dropping a writer that was not completed moves the state of the [`SharedFile`]
+    /// to a failed state, and readers receive an error.
     ///
     /// ## One writer at a time
     ///

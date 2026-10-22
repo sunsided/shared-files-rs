@@ -41,6 +41,11 @@ name = "shutdown_wakes_readers"
 path = "tests/shutdown_wakes_readers.rs"
 required-features = ["async-tempfile"]
 
+[[test]]
+name = "drop_fails_writer"
+path = "tests/drop_fails_writer.rs"
+required-features = ["async-tempfile"]
+
 [dependencies]
 async-tempfile = { version = "0.8.0", optional = true, features = ["uuid"] }
 async-trait = "0.1.89"
